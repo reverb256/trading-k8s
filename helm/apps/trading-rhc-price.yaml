@@ -1,0 +1,26 @@
+# ArgoCD Application: trading-rhc-price
+# RHC curve-price sampler (migrated from systemd timer 2026-09-21, pilot of the k3s migration).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: trading-rhc-price
+  namespace: argocd
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: trading
+  source:
+    repoURL: https://github.com/reverb256/trading-k8s.git
+    targetRevision: main
+    path: helm/charts/rhc-price
+    helm:
+      releaseName: rhc-price
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+      - PruneLast=true
+      - CreateNamespace=true

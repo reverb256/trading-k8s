@@ -1,0 +1,33 @@
+# ArgoCD Application: trading-helm (app-of-apps)
+# Watches helm/apps/ in trading-k8s and applies every Application manifest found there.
+# Adding a new app = drop a manifest in helm/apps/ + commit; no manual kubectl apply.
+# Bootstrap: applied once by hand; tracked in git afterwards.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: trading-helm
+  namespace: argocd
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  source:
+    repoURL: https://github.com/reverb256/trading-k8s.git
+    targetRevision: main
+    path: helm/apps
+    directory:
+      recurse: false
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: argoproj.io
+      kind: Application
+      jsonPointers:
+        - /metadata/annotations/argocd.argoproj.io~1refresh
+        - /operation

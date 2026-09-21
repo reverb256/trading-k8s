@@ -1,0 +1,4 @@
+apiVersion: v2
+name: rhc-price
+description: RHC bonding-curve price sampler (CronJob on nexus)
+version: 0.1.0
