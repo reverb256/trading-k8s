@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: trading-feed-forge
+  namespace: argocd
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: trading
+  source:
+    repoURL: https://github.com/reverb256/trading-k8s.git
+    targetRevision: main
+    path: helm/charts/py-job
+    helm:
+      releaseName: trading-feed-forge
+      values: |
+        name: trading-feed-forge
+        schedule: "*/10 * * * *"
+        command: ["python", "tools/feed_lane.py", "--seconds", "90", "--relay", "wss://feed.mainnet.chain.robinhood.com"]
+        deadline: 240
+        nodeName: forge
+        dataPath: /home/j_kro/feed-data
+        rhfeedPath: /home/j_kro/rhc-feed-src
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+      - PruneLast=true
+      - CreateNamespace=true

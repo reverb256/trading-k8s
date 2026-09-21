@@ -53,7 +53,7 @@ spec:
           volumes:
             - name: data
               hostPath:
-                path: /home/j_kro/Work/trading/data
+                path: {{ .Values.dataPath | default "/home/j_kro/Work/trading/data" }}
                 type: Directory
             - name: stampede
               hostPath:
@@ -61,5 +61,5 @@ spec:
                 type: Directory
             - name: rhcfeed
               hostPath:
-                path: /home/j_kro/rhc-feed/src
+                path: {{ .Values.rhfeedPath | default "/home/j_kro/rhc-feed/src" }}
                 type: Directory
