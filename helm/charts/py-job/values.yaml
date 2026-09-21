@@ -1,0 +1,8 @@
+name: example
+schedule: "*/10 * * * *"
+command: ["python", "tools/example.py"]
+image: docker.io/library/trading-jobs:local
+imagePullPolicy: Never
+nodeName: nexus
+gpu: false
+deadline: 240

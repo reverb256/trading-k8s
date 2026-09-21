@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: trading-cluster-summary
+  namespace: argocd
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: trading
+  source:
+    repoURL: https://github.com/reverb256/trading-k8s.git
+    targetRevision: main
+    path: helm/charts/py-job
+    helm:
+      releaseName: trading-cluster-summary
+      values: |
+        name: trading-cluster-summary
+        schedule: "15 * * * *"
+        command: ["python", "tools/cluster_summary.py"]
+        gpu: false
+        deadline: 180
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+      - PruneLast=true
+      - CreateNamespace=true

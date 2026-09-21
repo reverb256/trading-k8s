@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: trading-gradplay
+  namespace: argocd
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: trading
+  source:
+    repoURL: https://github.com/reverb256/trading-k8s.git
+    targetRevision: main
+    path: helm/charts/py-job
+    helm:
+      releaseName: trading-gradplay
+      values: |
+        name: trading-gradplay
+        schedule: "*/10 * * * *"
+        command: ["python", "tools/gradplay_strategy.py"]
+        gpu: false
+        deadline: 300
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+      - PruneLast=true
+      - CreateNamespace=true

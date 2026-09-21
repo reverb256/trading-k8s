@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: trading-grad-ml
+  namespace: argocd
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: trading
+  source:
+    repoURL: https://github.com/reverb256/trading-k8s.git
+    targetRevision: main
+    path: helm/charts/py-job
+    helm:
+      releaseName: trading-grad-ml
+      values: |
+        name: trading-grad-ml
+        schedule: "30 */6 * * *"
+        command: ["python", "tools/grad_ml.py"]
+        gpu: true
+        deadline: 600
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+      - PruneLast=true
+      - CreateNamespace=true

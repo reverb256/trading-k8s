@@ -1,0 +1,4 @@
+apiVersion: v2
+name: py-job
+description: Generic trading pipeline job (CronJob) running the trading-jobs image
+version: 0.1.0

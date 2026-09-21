@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: trading-grad-momentum
+  namespace: argocd
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: trading
+  source:
+    repoURL: https://github.com/reverb256/trading-k8s.git
+    targetRevision: main
+    path: helm/charts/py-job
+    helm:
+      releaseName: trading-grad-momentum
+      values: |
+        name: trading-grad-momentum
+        schedule: "*/2 * * * *"
+        command: ["python", "tools/grad_momentum.py"]
+        gpu: false
+        deadline: 180
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+      - PruneLast=true
+      - CreateNamespace=true
