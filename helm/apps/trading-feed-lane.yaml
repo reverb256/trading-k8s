@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: trading-feed-lane
+  namespace: argocd
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: trading
+  source:
+    repoURL: https://github.com/reverb256/trading-k8s.git
+    targetRevision: main
+    path: helm/charts/py-job
+    helm:
+      releaseName: trading-feed-lane
+      values: |
+        name: trading-feed-lane
+        schedule: "*/5 * * * *"
+        command: ["python", "tools/feed_lane.py", "--seconds", "45"]
+        deadline: 180
+        hostNetwork: true
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+      - PruneLast=true
+      - CreateNamespace=true
