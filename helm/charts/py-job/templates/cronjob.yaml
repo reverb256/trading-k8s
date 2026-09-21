@@ -15,6 +15,9 @@ spec:
       template:
         spec:
           restartPolicy: Never
+          {{- if .Values.hostNetwork }}
+          hostNetwork: true
+          {{- end }}
           {{- if .Values.gpu }}
           runtimeClassName: nvidia
           {{- end }}
@@ -25,6 +28,9 @@ spec:
               image: {{ .Values.image }}
               imagePullPolicy: {{ .Values.imagePullPolicy }}
               command: {{ toJson .Values.command }}
+              env:
+                - name: RHFEED_SRC
+                  value: "/opt/rhfeed/src"
               resources:
                 requests:
                   cpu: {{ .Values.cpuRequest | default "100m" }}
@@ -41,6 +47,9 @@ spec:
                 - name: stampede
                   mountPath: /stampede
                   readOnly: true
+                - name: rhcfeed
+                  mountPath: /opt/rhfeed/src
+                  readOnly: true
           volumes:
             - name: data
               hostPath:
@@ -49,4 +58,8 @@ spec:
             - name: stampede
               hostPath:
                 path: /home/j_kro/stampede/data
+                type: Directory
+            - name: rhcfeed
+              hostPath:
+                path: /home/j_kro/rhc-feed/src
                 type: Directory
