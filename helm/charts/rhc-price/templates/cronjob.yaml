@@ -1,0 +1,38 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: trading-rhc-price
+  namespace: {{ .Release.Namespace }}
+spec:
+  schedule: {{ .Values.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 240
+      template:
+        spec:
+          restartPolicy: Never
+          nodeSelector:
+            kubernetes.io/hostname: {{ .Values.nodeName }}
+          containers:
+            - name: rhc-price
+              image: {{ .Values.image }}
+              imagePullPolicy: {{ .Values.imagePullPolicy }}
+              volumeMounts:
+                - name: data
+                  mountPath: /work/data
+                - name: stampede
+                  mountPath: /stampede
+                  readOnly: true
+          volumes:
+            - name: data
+              hostPath:
+                path: {{ .Values.dataHostPath }}
+                type: Directory
+            - name: stampede
+              hostPath:
+                path: {{ .Values.stampedeHostPath }}
+                type: Directory

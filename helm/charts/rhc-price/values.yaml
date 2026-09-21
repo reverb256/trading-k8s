@@ -1,0 +1,6 @@
+image: docker.io/library/trading-rhc-price:local
+imagePullPolicy: Never
+schedule: "*/5 * * * *"
+nodeName: nexus
+dataHostPath: /home/j_kro/Work/trading/data
+stampedeHostPath: /home/j_kro/stampede/data
