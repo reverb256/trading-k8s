@@ -15,6 +15,9 @@ spec:
       template:
         spec:
           restartPolicy: Never
+          {{- if .Values.gpu }}
+          runtimeClassName: nvidia
+          {{- end }}
           nodeSelector:
             kubernetes.io/hostname: {{ .Values.nodeName }}
           containers:
@@ -22,11 +25,16 @@ spec:
               image: {{ .Values.image }}
               imagePullPolicy: {{ .Values.imagePullPolicy }}
               command: {{ toJson .Values.command }}
-              {{- if .Values.gpu }}
               resources:
+                requests:
+                  cpu: {{ .Values.cpuRequest | default "100m" }}
+                  memory: {{ .Values.memRequest | default "256Mi" }}
                 limits:
+                  cpu: {{ .Values.cpuLimit | default "2" }}
+                  memory: {{ .Values.memLimit | default "4Gi" }}
+                  {{- if .Values.gpu }}
                   nvidia.com/gpu: 1
-              {{- end }}
+                  {{- end }}
               volumeMounts:
                 - name: data
                   mountPath: /work/data
