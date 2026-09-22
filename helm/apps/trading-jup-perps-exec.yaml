@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: trading-jup-perps-exec
+  namespace: argocd
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: trading
+  source:
+    repoURL: https://github.com/reverb256/trading-k8s.git
+    targetRevision: main
+    path: helm/charts/py-job
+    helm:
+      releaseName: trading-jup-perps-exec
+      values: |
+        name: trading-jup-perps-exec
+        schedule: "*/15 * * * *"
+        command: ["python", "tools/jup_perps_exec.py", "--dry-run"]
+        deadline: 240
+        repoMount: true
+        configMount: true
+        hostNetwork: false
+        nodeName: nexus
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+      - PruneLast=true
+      - CreateNamespace=true

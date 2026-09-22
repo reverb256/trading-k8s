@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Values.name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.name }}
+    spec:
+      restartPolicy: Always
+      {{- if .Values.hostNetwork }}
+      hostNetwork: true
+      {{- end }}
+      nodeSelector:
+        kubernetes.io/hostname: {{ .Values.nodeName }}
+      containers:
+        - name: svc
+          image: {{ .Values.image }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          {{- if .Values.workdir }}
+          workingDir: {{ .Values.workdir }}
+          {{- end }}
+          command: {{ toJson .Values.command }}
+          env:
+            - name: RHFEED_SRC
+              value: "/opt/rhfeed/src"
+          resources:
+            requests:
+              cpu: {{ .Values.cpuRequest | default "100m" }}
+              memory: {{ .Values.memRequest | default "256Mi" }}
+            limits:
+              cpu: {{ .Values.cpuLimit | default "2" }}
+              memory: {{ .Values.memLimit | default "4Gi" }}
+          volumeMounts:
+            - name: repo
+              mountPath: /work
+            - name: stampede
+              mountPath: /stampede
+              readOnly: true
+            - name: rhcfeed
+              mountPath: /opt/rhfeed/src
+              readOnly: true
+            - name: gmgncfg
+              mountPath: /root/.config/gmgn
+              readOnly: true
+            - name: jupcfg
+              mountPath: /root/.config/jup
+              readOnly: true
+            - name: tradingcfg
+              mountPath: /root/.config/trading
+              readOnly: true
+      volumes:
+        - name: repo
+          hostPath:
+            path: /home/j_kro/Work/trading
+            type: Directory
+        - name: stampede
+          hostPath:
+            path: /home/j_kro/stampede/data
+            type: Directory
+        - name: rhcfeed
+          hostPath:
+            path: /home/j_kro/rhc-feed/src
+            type: Directory
+        - name: gmgncfg
+          hostPath:
+            path: /home/j_kro/.config/gmgn
+            type: Directory
+        - name: jupcfg
+          hostPath:
+            path: /home/j_kro/.config/jup
+            type: Directory
+        - name: tradingcfg
+          hostPath:
+            path: /home/j_kro/.config/trading
+            type: Directory

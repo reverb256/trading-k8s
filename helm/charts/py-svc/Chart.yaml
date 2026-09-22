@@ -1,0 +1,4 @@
+apiVersion: v2
+name: py-svc
+description: Generic trading long-running service (Deployment) on the trading-jobs image
+version: 0.1.0

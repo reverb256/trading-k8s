@@ -1,0 +1,7 @@
+name: py-svc
+command: ["python", "-c", "print('noop')"]
+workdir: ""
+hostNetwork: false
+nodeName: nexus
+image: docker.io/library/trading-jobs:local
+imagePullPolicy: Never
