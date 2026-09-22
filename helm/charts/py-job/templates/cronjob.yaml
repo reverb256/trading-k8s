@@ -38,8 +38,8 @@ spec:
                   value: "/opt/rhfeed/src"
               resources:
                 requests:
-                  cpu: {{ .Values.cpuRequest | default "100m" }}
-                  memory: {{ .Values.memRequest | default "256Mi" }}
+                  cpu: {{ .Values.cpuRequest | default "10m" }}
+                  memory: {{ .Values.memRequest | default "64Mi" }}
                 limits:
                   cpu: {{ .Values.cpuLimit | default "2" }}
                   memory: {{ .Values.memLimit | default "4Gi" }}
