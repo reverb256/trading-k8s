@@ -20,7 +20,7 @@ spec:
         command: ["python", "tools/strategy_lab.py", "collect"]
         deadline: 300
         repoMount: true
-        configMount: false
+        configMount: true
         hostNetwork: false
         nodeName: nexus
   syncPolicy:
