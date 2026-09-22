@@ -22,18 +22,21 @@ spec:
         schedule: "0,30 * * * *"
         # Sources the host exec.env at RUNTIME (no secret in git, same pattern as
         # trading-reconcile-evm) for two reasons:
-        #  1. --rpc '$EXEC_RPC_URL_MAINNET' (Helius) restores what the
+        #  1. --rpc "${EXEC_RPC_URL_MAINNET:-...}" (Helius) restores what the
         #     pre-migration host timer ran. The k8s cutover dropped the flag and
         #     silently fell back to the keyless public mainnet endpoint.
+        #     NB the variable MUST be double-quoted, not single-quoted: single
+        #     quotes suppress expansion and python receives the literal text
+        #     (observed 2026-09-22T18:30Z: "unknown url type:
+        #     '$EXEC_RPC_URL_MAINNET'"). The :? default keeps it working if the
+        #     env is ever absent.
         #  2. EXEC_RPC_URL_FALLBACK is OVERRIDDEN to a MAINNET endpoint. The
         #     global fallback in exec.env is solana-devnet.g.alchemy.com — so a
         #     mainnet failover queried the WRONG CHAIN. A devnet endpoint cannot
-        #     see mainnet signatures: if it answers (instead of 429ing like it
-        #     did on 2026-09-22 13:09) every logged send reads "unconfirmed" ->
-        #     a FALSE drift:true, which contaminates the release gate. Verified
-        #     failure 2026-09-22T18:00Z: job trading-reconcile-live-29835000
-        #     BackoffLimitExceeded on HTTP 429 from primary AND fallback.
-        command: ["sh", "-c", "set -a; . /work/data/exec.env 2>/dev/null; set +a; export EXEC_RPC_URL_FALLBACK='https://api.mainnet-beta.solana.com'; exec python tools/reconcile.py --wallet Ghr7xwP6HqzYVeXAq7uToR7poUSQuJ9pB8dCeQqA5wmf --log data/exec_log.jsonl --rpc '$EXEC_RPC_URL_MAINNET'"]
+        #     see mainnet signatures: if it answers instead of erroring, every
+        #     logged send reads "unconfirmed" -> a FALSE drift:true, which is
+        #     exactly what contaminates the release gate.
+        command: ["sh", "-c", "set -a; . /work/data/exec.env 2>/dev/null; set +a; export EXEC_RPC_URL_FALLBACK='https://api.mainnet-beta.solana.com'; exec python tools/reconcile.py --wallet Ghr7xwP6HqzYVeXAq7uToR7poUSQuJ9pB8dCeQqA5wmf --log data/exec_log.jsonl --rpc \"${EXEC_RPC_URL_MAINNET:-https://api.mainnet-beta.solana.com}\""]
         deadline: 600
         repoMount: true
         configMount: false
