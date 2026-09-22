@@ -23,6 +23,9 @@ spec:
         env:
           - name: TRADING_METRICS_BIND
             value: "0.0.0.0:9797"
+        # Declarative roll knob: bump to roll the daemon (it imports code at startup,
+        # so a new pod is required to pick up repo changes).
+        restartedAt: "2026-09-22T17:49:06Z"
   syncPolicy:
     automated:
       prune: true

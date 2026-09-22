@@ -16,6 +16,10 @@ spec:
     metadata:
       labels:
         app: {{ .Values.name }}
+      {{- if .Values.restartedAt }}
+      annotations:
+        kubectl.kubernetes.io/restartedAt: {{ .Values.restartedAt | quote }}
+      {{- end }}
     spec:
       restartPolicy: Always
       securityContext:
