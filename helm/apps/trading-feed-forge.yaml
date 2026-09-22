@@ -18,7 +18,7 @@ spec:
         name: trading-feed-forge
         schedule: "*/10 * * * *"
         command: ["python", "tools/feed_lane.py", "--seconds", "90", "--relay", "wss://feed.mainnet.chain.robinhood.com"]
-        deadline: 240
+        deadline: 900
         nodeName: forge
         dataPath: /home/j_kro/feed-data
         rhfeedPath: /home/j_kro/rhc-feed/src
