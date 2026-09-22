@@ -21,7 +21,9 @@ for p in sorted(APP_DIR.glob("*.yaml")):
     for cmd in re.findall(r'command: (\[[^\]]*\])', text):
         # split the JSON-ish array into elements
         elems = re.findall(r'"((?:[^"\\]|\\.)*)"', cmd)
-        for e in elems:
+        # sh -c payloads are shell strings BY DESIGN -- skip them
+        start = 1 if len(elems) >= 2 and elems[0] == "sh" and elems[1] == "-c" else 0
+        for e in elems[start:]:
             if re.search(r"\.py [^-]", e) or re.search(r"\.py --", e):
                 problems.append(f"{p.name}: glued command element: {e!r}")
     # duplicate keys in the embedded values block (indented simple mappings)
