@@ -4,3 +4,12 @@ schedule: "*/5 * * * *"
 nodeName: nexus
 dataHostPath: /home/j_kro/Work/trading/data
 stampedeHostPath: /home/j_kro/stampede/data
+
+# Resource requests for the `rhc-price` container are per-app values —
+# `cpuRequest` / `memRequest`, both defaulted in templates/cronjob.yaml and both
+# set per workload in helm/apps/trading-rhc-price.yaml.  The 10m/64Mi default is
+# a FLOOR (it renders the `default-requests` LimitRange value this container
+# inherited before t_5edaea07), not a size; the sizing policy, the measurement
+# convention and this workload's p95 numbers are written next to the value in
+# templates/cronjob.yaml.  This chart declares no limits at all, so
+# `request <= limit` is not binding for it.
