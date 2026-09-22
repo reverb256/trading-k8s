@@ -18,6 +18,9 @@ spec:
         name: trading-feed-lane
         schedule: "*/5 * * * *"
         command: ["python", "tools/feed_lane.py", "--seconds", "45"]
+        # Requests-sized per workload (t_6cf16590): own 7d/5m p95 19.8m over 389
+        # incarnations (70 of them >10m), cpu -> next 10m.
+        cpuRequest: 20m
         deadline: 180
         hostNetwork: true
   syncPolicy:

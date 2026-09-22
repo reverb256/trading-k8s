@@ -6,3 +6,9 @@ imagePullPolicy: Never
 nodeName: nexus
 gpu: false
 deadline: 240
+
+# Resource requests for the `job` container are per-app values — `cpuRequest` /
+# `memRequest` (both defaulted in templates/cronjob.yaml, both set per workload in
+# helm/apps/<name>.yaml). The 10m/64Mi default is a FLOOR, not a size; the sizing
+# policy, the measurement convention and the per-workload p95 numbers are written
+# down next to that value in templates/cronjob.yaml.

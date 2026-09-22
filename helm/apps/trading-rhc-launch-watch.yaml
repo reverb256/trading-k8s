@@ -18,6 +18,10 @@ spec:
         name: trading-rhc-launch-watch
         schedule: "* * * * *"
         command: ["python", "tools/rhc_launch_watch.py", "--seconds", "52"]
+        # Requests-sized per workload (t_6cf16590): own 7d/5m p95 16.1m over 1109
+        # incarnations (113 of them >10m), cpu -> next 10m. Memory p95 59.3Mi is
+        # already under the 64Mi request.
+        cpuRequest: 20m
         deadline: 120
         hostNetwork: true
   syncPolicy:
