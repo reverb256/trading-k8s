@@ -25,7 +25,7 @@ spec:
             value: "0.0.0.0:9797"
         # Declarative roll knob: bump to roll the daemon (it imports code at startup,
         # so a new pod is required to pick up repo changes).
-        restartedAt: "2026-09-22T17:49:06Z"
+        restartedAt: "2026-09-22T18:00:43Z"
   syncPolicy:
     automated:
       prune: true
