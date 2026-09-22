@@ -1,5 +1,18 @@
 # Declarative image import (2026-09-22): imports the kaniko tar into the k3s
 # containerd via its socket -- no host docker, no host ctr.
+#
+# REQUESTS (t_5edaea07): the `importer` container declares NO resources, and it
+# deliberately stays that way -- there is nothing to size it from.  This CronJob
+# is `suspend: true` with the placeholder schedule `0 0 31 2 *` (a date that
+# never occurs), and KSM's own record over the full 7d window has 0 Jobs, 0 pods,
+# no `lastScheduleTime` and no `nextScheduleTime` for it, so it has never had a
+# measurable incarnation.  Committing a number here would be inventing one.  The
+# disposition is recorded in `reverb256/media-k8s`
+# `cluster/addons/default-requests/README.md` section 2 (known gaps); re-open
+# when the importer is first run for real, and size it from ITS OWN p95 then --
+# `ctr images import` of a ~GB tar is I/O-bound, not CPU-bound, so this
+# workload's profile will not look like `rhc-price`'s (870m/176Mi, the other
+# trading container t_5edaea07 sized).
 apiVersion: batch/v1
 kind: CronJob
 metadata:
