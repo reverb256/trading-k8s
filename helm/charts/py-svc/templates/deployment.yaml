@@ -49,6 +49,10 @@ spec:
               value: "/home/j_kro"
             - name: RHFEED_SRC
               value: "/opt/rhfeed/src"
+            {{- range .Values.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
           resources:
             requests:
               cpu: {{ .Values.cpuRequest | default "100m" }}
