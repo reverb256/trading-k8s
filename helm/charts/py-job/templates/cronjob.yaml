@@ -10,7 +10,9 @@ spec:
   failedJobsHistoryLimit: 1
   jobTemplate:
     spec:
-      backoffLimit: {{ .Values.backoffLimit | default 2 }}
+      # NOTE: not `| default 2` - Sprig treats 0 as empty, so an explicit
+      # backoffLimit: 0 (never re-run a sweep) would silently render 2.
+      backoffLimit: {{ if hasKey .Values "backoffLimit" }}{{ .Values.backoffLimit }}{{ else }}2{{ end }}
       ttlSecondsAfterFinished: 600
       activeDeadlineSeconds: {{ .Values.deadline }}
       template:
