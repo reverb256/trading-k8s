@@ -21,6 +21,7 @@ spec:
         # NO schedule at all, which is why it froze for 1.7 days.
         schedule: "10 6 * * *"
         command: ["python", "tools/gmgn_portfolio.py"]
+        backoffLimit: 0   # never re-run a whole sweep: a retry is more requests
         deadline: 600
         repoMount: true
         configMount: true

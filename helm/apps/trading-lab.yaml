@@ -16,7 +16,7 @@ spec:
       releaseName: trading-lab
       values: |
         name: trading-lab
-        schedule: "*/15 * * * *"
+        schedule: "3-59/15 * * * *"   # GMGN stagger: 45-call sweep must not share a minute
         command: ["python", "tools/strategy_lab.py", "collect"]
         # Requests-sized per workload (t_6cf16590). Own 7d/5m p95 366.2m over its
         # 8 incarnations (366.2/347.8/327.9/320.6/319.5/295.0/126.2/98.9m), max
@@ -25,6 +25,7 @@ spec:
         # trading-lab incarnations (5 `trading-lab-*` runs + the manual
         # `--from=cronjob/trading-lab` pod lab-verify-1790098831-g5fb5).
         cpuRequest: 370m
+        backoffLimit: 0   # never re-run a whole sweep: a retry is more requests
         deadline: 300
         repoMount: true
         configMount: true

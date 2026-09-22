@@ -16,8 +16,9 @@ spec:
       releaseName: trading-trench-strategy
       values: |
         name: trading-trench-strategy
-        schedule: "*/10 * * * *"
+        schedule: "5-59/10 * * * *"   # GMGN stagger: share the 10-min slot one job at a time
         command: ["python", "tools/trench_strategy.py"]
+        backoffLimit: 0   # never re-run a whole sweep: a retry is more requests
         deadline: 300
         repoMount: true
         configMount: true

@@ -18,6 +18,7 @@ spec:
         name: trading-gmgn-track
         schedule: "* * * * *"
         command: ["python", "tools/gmgn_track.py"]
+        backoffLimit: 0   # never re-run a whole sweep: a retry is more requests
         deadline: 55
         repoMount: true
         configMount: true

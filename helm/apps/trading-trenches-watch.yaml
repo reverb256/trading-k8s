@@ -16,8 +16,9 @@ spec:
       releaseName: trading-trenches-watch
       values: |
         name: trading-trenches-watch
-        schedule: "*/15 * * * *"
+        schedule: "8-59/15 * * * *"   # GMGN stagger: share the 15-min slot one job at a time
         command: ["python", "tools/gmgn_trenches_watch.py"]
+        backoffLimit: 0   # never re-run a whole sweep: a retry is more requests
         deadline: 300
         repoMount: true
         configMount: true
