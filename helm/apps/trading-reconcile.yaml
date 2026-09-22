@@ -16,7 +16,13 @@ spec:
       releaseName: trading-reconcile
       values: |
         name: trading-reconcile
-        schedule: "45 4 * * *"
+        # Every 30 min (was daily 04:45). The release gate
+        # (src/daemon.py::_halt_contaminated) only flags drift from a row with
+        # ts >= halt_ts, so a daily cadence made "no drift since the halt"
+        # vacuous for every halt between one run and the next. Cost is one
+        # getSignaturesForAddress call per run (reconcile.py pages only when a
+        # wallet exceeds --limit), so 48 runs/day stays inside RPC budgets.
+        schedule: "15,45 * * * *"
         command: ["python", "tools/reconcile.py", "--wallet", "5qUpL8vDkBANtoaFfSvCRysa8MkndJNLu1dKsHfxUPZv", "--log", "data/exec_log.jsonl"]
         deadline: 600
         repoMount: true
