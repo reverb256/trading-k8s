@@ -5,3 +5,6 @@ hostNetwork: false
 nodeName: nexus
 image: docker.io/library/trading-jobs:local
 imagePullPolicy: Never
+# env: extra container env entries (list of {name, value});
+# rendered after HOME and RHFEED_SRC. Absent/empty renders nothing.
+env: []

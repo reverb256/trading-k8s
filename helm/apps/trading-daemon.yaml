@@ -20,6 +20,9 @@ spec:
         workdir: "/work/src"
         hostNetwork: true
         nodeName: nexus
+        env:
+          - name: TRADING_METRICS_BIND
+            value: "0.0.0.0:9797"
   syncPolicy:
     automated:
       prune: true
