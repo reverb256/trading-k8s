@@ -21,6 +21,7 @@ spec:
         deadline: 900
         nodeName: forge
         dataPath: /home/j_kro/feed-data
+        repoMount: false
         rhfeedPath: /home/j_kro/rhc-feed/src
   syncPolicy:
     automated:
