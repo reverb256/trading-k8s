@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: trading-gmgn-portfolio
+  namespace: argocd
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: trading
+  source:
+    repoURL: https://github.com/reverb256/trading-k8s.git
+    targetRevision: main
+    path: helm/charts/py-job
+    helm:
+      releaseName: trading-gmgn-portfolio
+      values: |
+        name: trading-gmgn-portfolio
+        # Daily, not */15: gmgn_portfolio makes 6 GMGN calls per run and the
+        # free tier rate-limits hard (bans extend on hammering). The feed had
+        # NO schedule at all, which is why it froze for 1.7 days.
+        schedule: "10 6 * * *"
+        command: ["python", "tools/gmgn_portfolio.py"]
+        deadline: 600
+        repoMount: true
+        configMount: true
+        hostNetwork: false
+        nodeName: nexus
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+      - PruneLast=true
+      - CreateNamespace=true
