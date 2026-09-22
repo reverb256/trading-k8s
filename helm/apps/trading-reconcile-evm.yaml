@@ -17,7 +17,7 @@ spec:
       values: |
         name: trading-reconcile-evm
         schedule: "20 5 * * *"
-        command: ["python", "tools/reconcile_evm.py"]
+        command: ["sh", "-c", "set -a; . /work/data/exec.env 2>/dev/null; set +a; exec python tools/reconcile_evm.py"]
         deadline: 600
         repoMount: true
         configMount: false
