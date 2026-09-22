@@ -8,3 +8,8 @@ imagePullPolicy: Never
 # env: extra container env entries (list of {name, value});
 # rendered after HOME and RHFEED_SRC. Absent/empty renders nothing.
 env: []
+# restartedAt: RFC3339 timestamp; when non-empty the chart renders it as the
+# pod-template annotation kubectl.kubernetes.io/restartedAt, which rolls the
+# Deployment (declarative replacement for `kubectl rollout restart`).
+# Empty (default) renders NO annotation, so apps that don't set it are untouched.
+restartedAt: ""
