@@ -1,0 +1,35 @@
+# Declarative image import (2026-09-22): imports the kaniko tar into the k3s
+# containerd via its socket -- no host docker, no host ctr.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: trading-image-import
+  namespace: trading
+spec:
+  schedule: "0 0 31 2 *"
+  suspend: true
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 1800
+      template:
+        spec:
+          restartPolicy: Never
+          nodeSelector:
+            kubernetes.io/hostname: nexus
+          containers:
+            - name: importer
+              image: rancher/k3s:v1.31.5-k3s1
+              command: ["/bin/sh", "-c"]
+              args:
+                - "ctr --address /run/k3s/containerd/containerd.sock -n k8s.io images import /work/data/images/trading-jobs.tar && ctr --address /run/k3s/containerd/containerd.sock -n k8s.io images tag --force docker.io/library/trading-jobs:latest docker.io/library/trading-jobs:local && echo IMPORT-OK"
+              volumeMounts:
+                - {name: data, mountPath: /work/data}
+                - {name: containerd, mountPath: /run/k3s/containerd}
+              securityContext:
+                runAsUser: 0
+          volumes:
+            - name: data
+              hostPath: {path: /home/j_kro/Work/trading/data, type: Directory}
+            - name: containerd
+              hostPath: {path: /run/k3s/containerd, type: Directory}
