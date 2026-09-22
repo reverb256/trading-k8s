@@ -39,6 +39,13 @@ spec:
                   value: "/home/j_kro"
                 - name: RHFEED_SRC
                   value: "/opt/rhfeed/src"
+                # env (list of {name, value}) adds per-app container env after
+                # the two above — same shape as the py-svc chart. Empty/absent
+                # renders nothing.
+                {{- range .Values.env }}
+                - name: {{ .name }}
+                  value: {{ .value | quote }}
+                {{- end }}
               resources:
                 # Policy (t_6cf16590) — do CronJob pods get requests-sized at all?
                 # YES. A request is the scheduler's reservation for as long as the

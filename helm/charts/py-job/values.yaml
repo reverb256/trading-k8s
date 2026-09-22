@@ -6,6 +6,9 @@ imagePullPolicy: Never
 nodeName: nexus
 gpu: false
 deadline: 240
+# env: extra container env entries (list of {name, value}); rendered after HOME
+# and RHFEED_SRC. Absent/empty renders nothing.
+env: []
 
 # Resource requests for the `job` container are per-app values — `cpuRequest` /
 # `memRequest` (both defaulted in templates/cronjob.yaml, both set per workload in
