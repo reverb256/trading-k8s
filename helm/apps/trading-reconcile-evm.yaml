@@ -16,7 +16,16 @@ spec:
       releaseName: trading-reconcile-evm
       values: |
         name: trading-reconcile-evm
-        schedule: "20 5 * * *"
+        # 30 min, matching the SOL rails (trading-reconcile 15,45 /
+        # trading-reconcile-live 0,30) and offset from both. It was DAILY
+        # ("20 5 * * *"), which made the RHC rail the weakest link in the
+        # accounting layer: the last EVM row could be up to 24 h old while the
+        # SOL rail was 5 min old, and the RHC lane is the LIVE one. The cadence
+        # change belongs to the same audit that moved the SOL rails off daily
+        # (docs/CUTOVER-ENV-AUDIT-2026-09-22.md) but was missed here. Cost is a
+        # receipt fetch per logged RHC `sent` tx (37 on 2026-09-22) against the
+        # RHC public RPC, so the request floor is unchanged.
+        schedule: "5,35 * * * *"
         command: ["sh", "-c", "set -a; . /work/data/exec.env 2>/dev/null; set +a; unset EXEC_ARMED EVMC_ALLOW_LIVE FUEL_REFUEL_MODE; exec python tools/reconcile_evm.py"]
         deadline: 600
         repoMount: true
