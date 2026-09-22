@@ -19,6 +19,7 @@ spec:
         schedule: "* * * * *"
         command: ["python", "tools/rhc_grad_watch.py", "--tail", "50"]
         deadline: 55
+        hostNetwork: true
         nodeName: nexus
   syncPolicy:
     automated:
