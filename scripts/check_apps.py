@@ -61,6 +61,20 @@ for p in sorted(APP_DIR.glob("*.yaml")):
     for flag in ARM_FLAGS:
         if re.search(rf"-\s*name:\s*{flag}\b", text):
             problems.append(f"{p.name}: passes {flag} into the container env")
+    # SECRET-IN-GIT guard (2026-09-22): the halt-alert A2A peer credential is an
+    # env-only 0600 FILE that the job mounts and reads. A manifest may name that
+    # file's path and nothing else -- no token value, and no path outside the
+    # mounted repo's data dir (which is git-ignored and rendered by
+    # deploy/halt-alerts/provision-peer-env.py on the host).
+    if "HALT_ALERTS_PEER_TOKEN" in text:
+        problems.append(f"{p.name}: carries HALT_ALERTS_PEER_TOKEN -- a bearer "
+                        f"token for the money-alert path must never be in git")
+    for value in re.findall(r"-\s*name:\s*HALT_ALERTS_PEER_FILE\s*\n\s*value:\s*(\S+)",
+                            text):
+        if not value.strip('"').startswith("/work/data/"):
+            problems.append(f"{p.name}: HALT_ALERTS_PEER_FILE={value!r} is outside "
+                            f"/work/data/ -- the peer file must be the mounted, "
+                            f"git-ignored 0600 file")
 
 if problems:
     print("APP-CHECK-FAIL")

@@ -26,6 +26,15 @@ spec:
         configMount: false
         hostNetwork: false
         nodeName: nexus
+        # The halt-alert peer credential is an ENV-ONLY 0600 file, never a value
+        # in git: this names the path the pod reads it from. The repo is
+        # hostPath-mounted at /work, so /work/data/halt_peer.env IS the host's
+        # data/halt_peer.env. Rendered by the trading repo's
+        # deploy/halt-alerts/provision-peer-env.py; git-ignored; and
+        # tools/halt_alerts.py refuses any peer file that is not 0600.
+        env:
+          - name: HALT_ALERTS_PEER_FILE
+            value: "/work/data/halt_peer.env"
   syncPolicy:
     automated:
       prune: true
@@ -34,3 +43,13 @@ spec:
       - ApplyOutOfSyncOnly=true
       - PruneLast=true
       - CreateNamespace=true
+      # REPLACE (2026-09-22): this CronJob carried a hand-`kubectl patch`ed
+      # volumeMount + volume for the whole host `/home/j_kro/.hermes` directory
+      # (added 2026-09-22T02:35Z by field manager `kubectl-patch`) that git does
+      # not declare — an out-of-git mount handing the job the agent's ENTIRE
+      # config, provider keys included, to work around the peer-config gap. The
+      # entry belongs to another field manager, so a normal server-side-apply
+      # sync leaves it in place; only a full replace drops what the manifest does
+      # not declare. With it gone the job authenticates from the 0600 peer file
+      # above and reads nothing from ~/.hermes.
+      - Replace=true
