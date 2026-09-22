@@ -15,6 +15,9 @@ spec:
       template:
         spec:
           restartPolicy: Never
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
           {{- if .Values.hostNetwork }}
           hostNetwork: true
           {{- end }}
@@ -29,6 +32,8 @@ spec:
               imagePullPolicy: {{ .Values.imagePullPolicy }}
               command: {{ toJson .Values.command }}
               env:
+                - name: HOME
+                  value: "/home/j_kro"
                 - name: RHFEED_SRC
                   value: "/opt/rhfeed/src"
               resources:
@@ -51,13 +56,13 @@ spec:
                 {{- end }}
                 {{- if .Values.configMount }}
                 - name: gmgncfg
-                  mountPath: /root/.config/gmgn
+                  mountPath: /home/j_kro/.config/gmgn
                   readOnly: true
                 - name: jupcfg
-                  mountPath: /root/.config/jup
+                  mountPath: /home/j_kro/.config/jup
                   readOnly: true
                 - name: tradingcfg
-                  mountPath: /root/.config/trading
+                  mountPath: /home/j_kro/.config/trading
                   readOnly: true
                 {{- end }}
                 - name: stampede
