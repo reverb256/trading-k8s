@@ -17,8 +17,8 @@ spec:
       values: |
         name: trading-rhc-grad-watch
         schedule: "* * * * *"
-        command: ["python", "tools/rhc_grad_watch.py", "--tail", "50"]
-        deadline: 55
+        command: ["python", "tools/rhc_grad_watch.py", "--tail", "45"]
+        deadline: 75
         hostNetwork: true
         nodeName: nexus
   syncPolicy:
