@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    app.kubernetes.io/name: rhc-feed-relay
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  replicas: 1
+  # Recreate, not RollingUpdate: the pod binds host port 9642, so a rolling
+  # update would deadlock with two pods contending for the same port. There is
+  # also nothing to stay up for during a rollout -- consumers reconnect.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rhc-feed-relay
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rhc-feed-relay
+    spec:
+      nodeName: {{ .Values.nodeName }}
+      {{- if .Values.hostNetwork }}
+      hostNetwork: true
+      # Required with hostNetwork, otherwise the pod inherits the node's
+      # resolv.conf and cannot resolve the upstream feed hostname.
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- end }}
+      containers:
+        - name: relay
+          image: "{{ .Values.image }}"
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          command: ["{{ .Values.entrypoint }}"]
+          args:
+            {{- range .Values.args }}
+            - {{ . | quote }}
+            {{- end }}
+          ports:
+            - name: feed
+              containerPort: {{ .Values.port }}
+              protocol: TCP
+          # tcpSocket, not an HTTP check: the broadcaster answers a plain GET
+          # with "400 handshake error: bad Upgrade header", so an httpGet probe
+          # would treat a healthy relay as unhealthy. A listening socket is the
+          # same thing the compose healthcheck proved.
+          #
+          # Neither probe proves the UPSTREAM feed is connected -- nothing the
+          # relay exposes does. Check the logs for "Feed connected" instead.
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
