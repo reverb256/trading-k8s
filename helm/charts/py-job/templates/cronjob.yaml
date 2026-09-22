@@ -10,7 +10,6 @@ spec:
   failedJobsHistoryLimit: 1
   jobTemplate:
     spec:
-      ttlSecondsAfterFinished: 3600
       backoffLimit: 2
       ttlSecondsAfterFinished: 600
       activeDeadlineSeconds: {{ .Values.deadline }}
