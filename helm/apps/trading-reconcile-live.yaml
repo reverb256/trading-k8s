@@ -36,7 +36,7 @@ spec:
         #     see mainnet signatures: if it answers instead of erroring, every
         #     logged send reads "unconfirmed" -> a FALSE drift:true, which is
         #     exactly what contaminates the release gate.
-        command: ["sh", "-c", "set -a; . /work/data/exec.env 2>/dev/null; set +a; export EXEC_RPC_URL_FALLBACK='https://api.mainnet-beta.solana.com'; exec python tools/reconcile.py --wallet Ghr7xwP6HqzYVeXAq7uToR7poUSQuJ9pB8dCeQqA5wmf --log data/exec_log.jsonl --rpc \"${EXEC_RPC_URL_MAINNET:-https://api.mainnet-beta.solana.com}\""]
+        command: ["sh", "-c", "set -a; . /work/data/exec.env 2>/dev/null; set +a; unset EXEC_ARMED EVMC_ALLOW_LIVE FUEL_REFUEL_MODE; export EXEC_RPC_URL_FALLBACK='https://api.mainnet-beta.solana.com'; exec python tools/reconcile.py --wallet Ghr7xwP6HqzYVeXAq7uToR7poUSQuJ9pB8dCeQqA5wmf --log data/exec_log.jsonl --rpc \"${EXEC_RPC_URL_MAINNET:-https://api.mainnet-beta.solana.com}\""]
         deadline: 600
         repoMount: true
         configMount: false

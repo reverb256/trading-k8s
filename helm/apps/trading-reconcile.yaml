@@ -28,7 +28,7 @@ spec:
         # devnet endpoint fails the job outright and leaves NO row — the gate
         # then reads a stale ledger as clean. The env's fallback is Alchemy
         # devnet, i.e. the CORRECT chain for this devnet wallet.
-        command: ["sh", "-c", "set -a; . /work/data/exec.env 2>/dev/null; set +a; exec python tools/reconcile.py --wallet 5qUpL8vDkBANtoaFfSvCRysa8MkndJNLu1dKsHfxUPZv --log data/exec_log.jsonl"]
+        command: ["sh", "-c", "set -a; . /work/data/exec.env 2>/dev/null; set +a; unset EXEC_ARMED EVMC_ALLOW_LIVE FUEL_REFUEL_MODE; exec python tools/reconcile.py --wallet 5qUpL8vDkBANtoaFfSvCRysa8MkndJNLu1dKsHfxUPZv --log data/exec_log.jsonl"]
         deadline: 600
         repoMount: true
         configMount: false
