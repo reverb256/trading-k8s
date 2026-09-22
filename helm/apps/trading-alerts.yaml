@@ -18,6 +18,9 @@ spec:
         name: trading-alerts
         schedule: "*/2 * * * *"
         command: ["python", "tools/halt_alerts.py", "--once"]
+        # Requests-sized per workload (t_6cf16590): own 7d/5m p95 29.6m over 61
+        # incarnations (11 of them >10m), cpu -> next 10m.
+        cpuRequest: 30m
         deadline: 600
         repoMount: true
         configMount: false

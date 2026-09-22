@@ -18,6 +18,13 @@ spec:
         name: trading-lab
         schedule: "*/15 * * * *"
         command: ["python", "tools/strategy_lab.py", "collect"]
+        # Requests-sized per workload (t_6cf16590). Own 7d/5m p95 366.2m over its
+        # 8 incarnations (366.2/347.8/327.9/320.6/319.5/295.0/126.2/98.9m), max
+        # over pods, cpu -> next 10m. NOT a namespace-wide number: the ns-wide max
+        # over `job` equals it only because all 6 top pods in the ns are
+        # trading-lab incarnations (5 `trading-lab-*` runs + the manual
+        # `--from=cronjob/trading-lab` pod lab-verify-1790098831-g5fb5).
+        cpuRequest: 370m
         deadline: 300
         repoMount: true
         configMount: true

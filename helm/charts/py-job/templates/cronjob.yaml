@@ -38,6 +38,35 @@ spec:
                 - name: RHFEED_SRC
                   value: "/opt/rhfeed/src"
               resources:
+                # Policy (t_6cf16590) — do CronJob pods get requests-sized at all?
+                # YES. A request is the scheduler's reservation for as long as the
+                # pod holds it, and a cron pod holds one for its whole run, so the
+                # "request below observed p95 is a scheduling blind spot" rule
+                # applies to per-run pods exactly as it does to a long-running
+                # service. The 10m/64Mi below is therefore a FLOOR for a workload
+                # nobody has measured (the same thing the cluster-wide
+                # `default-requests` LimitRange is), never a size: a floor is not
+                # a size.
+                # Sizing convention (same as the rest of the cluster): workload-level
+                # p95 from VictoriaMetrics, 7d window at 5m resolution, MAX over
+                # every pod incarnation of the workload, cpu rounded up to the next
+                # 10m and memory to the next 16Mi, with request <= limit (this
+                # chart's limits are cpu 2 / memory 4Gi, so cpu has room).
+                # Size each CronJob from ITS OWN p95 — never from the namespace-wide
+                # max over `job` containers. On 2026-09-22 the ns-wide max was
+                # 366.2m and that is trading-lab's own workload p95: its 8
+                # incarnations were the top 8 pods in the namespace, and the first
+                # pod belonging to any other workload read 29.6m. Only 6 of the 41
+                # CronJobs exceed 10m at all (the other 35 are at 0-10m or never
+                # lived long enough to be scraped), so one number for all of them
+                # would be wrong in both directions.
+                # A pod made by `kubectl create job --from=cronjob/<x>` carries an
+                # ownerRef to <x>, so KSM resolves it as an incarnation of that
+                # CronJob and it belongs in that workload's max.
+                # Per-workload values live in helm/apps/<name>.yaml (cpuRequest /
+                # memRequest). Requests only: limits are a separate pass, because a
+                # request below p95 is a blind spot while a limit near p95 is an
+                # OOMKill waiting to happen.
                 requests:
                   cpu: {{ .Values.cpuRequest | default "10m" }}
                   memory: {{ .Values.memRequest | default "64Mi" }}

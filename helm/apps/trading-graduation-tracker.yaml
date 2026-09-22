@@ -18,6 +18,10 @@ spec:
         name: trading-graduation-tracker
         schedule: "*/10 * * * *"
         command: ["python", "tools/graduation_tracker.py"]
+        # Requests-sized per workload (t_6cf16590): own 7d/5m p95 16.2m, but only
+        # 2 incarnations in the window produced cAdvisor samples (16.2 / 3.7m) —
+        # thin evidence, recorded as such; cpu -> next 10m.
+        cpuRequest: 20m
         gpu: false
         deadline: 420
   syncPolicy:
