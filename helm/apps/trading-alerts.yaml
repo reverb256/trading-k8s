@@ -18,7 +18,7 @@ spec:
         name: trading-alerts
         schedule: "*/2 * * * *"
         command: ["python", "tools/halt_alerts.py", "--once"]
-        deadline: 90
+        deadline: 600
         repoMount: true
         configMount: false
         hostNetwork: false
