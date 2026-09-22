@@ -16,7 +16,24 @@ spec:
       releaseName: trading-daemon
       values: |
         name: trading-daemon
-        command: ["python", "-u", "daemon.py"]
+        # Sources the host exec.env at RUNTIME (no secret in git, the same
+        # pattern trading-reconcile* already use). The k3s cutover dropped the
+        # host unit's EnvironmentFile=…/data/exec.env, which took ALCHEMY_KEY
+        # and EXEC_RPC_URL with it: the daemon's EVM dryrun failed 3x with
+        # "ALCHEMY_KEY not set (and no EVMC_RPC_URL override)" at
+        # 2026-09-22T13:58:42-44Z, the startup log shows the keyless public
+        # `rpc=https://api.devnet.solana.com` instead of the keyed endpoint, and
+        # the live canary lane lost EXEC_RPC_URL_MAINNET (src/canary_exec.py).
+        #
+        # THE `unset` IS MANDATORY. exec.env also carries EXEC_ARMED=1,
+        # EVMC_ALLOW_LIVE=1 and FUEL_REFUEL_MODE=armed; config/exec.yaml already
+        # says `armed: true`, and the two-key rule is
+        # (EXEC_ARMED truthy) AND (cfg.armed), so a bare source ARMS the devnet
+        # send path on pod start. EVMC_ALLOW_LIVE=1 is one of the RHC live
+        # lane's two keys and FUEL_REFUEL_MODE=armed turns the refueler on.
+        # Stripping the three keeps `armed: false`, which is the REQUIRED state:
+        # the breaker stays halted and nothing is resumed.
+        command: ["sh", "-c", "set -a; . /work/data/exec.env 2>/dev/null; set +a; unset EXEC_ARMED EVMC_ALLOW_LIVE FUEL_REFUEL_MODE; exec python -u /work/src/daemon.py"]
         workdir: "/work/src"
         hostNetwork: true
         nodeName: nexus
@@ -25,7 +42,7 @@ spec:
             value: "0.0.0.0:9797"
         # Declarative roll knob: bump to roll the daemon (it imports code at startup,
         # so a new pod is required to pick up repo changes).
-        restartedAt: "2026-09-22T18:00:43Z"
+        restartedAt: "2026-09-22T19:22:37Z"
   syncPolicy:
     automated:
       prune: true

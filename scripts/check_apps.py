@@ -1,11 +1,22 @@
 #!/usr/bin/env python3
-"""App-manifest guard: catches the two 2026-09-22 bug classes.
+"""App-manifest guard: catches the three known bug classes.
 
 1. Glued command flags: an argv element like "tools/foo.py --flag" (the flag
    belongs in its own element) -- python then treats the whole string as a
    filename.
 2. Duplicate mapping keys in the values block (YAML last-wins silently ignored
    `hostNetwork: true` when a duplicate `false` followed).
+3. ARM-FLAG LEAK (2026-09-22): a manifest that sources the host
+   /work/data/exec.env must strip EXEC_ARMED / EVMC_ALLOW_LIVE /
+   FUEL_REFUEL_MODE in the same shell payload, and no manifest may pass those
+   names through `env:`. That file holds EXEC_ARMED=1, EVMC_ALLOW_LIVE=1 and
+   FUEL_REFUEL_MODE=armed, and config/exec.yaml already carries `armed: true`,
+   so the two-key arming rule -- (EXEC_ARMED truthy) AND (cfg.armed) in
+   src/exec_bridge.py -- is ONE key away from the moment a pod starts. The k3s
+   cutover dropped the daemon's exec.env and the fix must restore the RPC/key
+   env WITHOUT arming; a blanket `set -a; . exec.env` arms the devnet send path,
+   hands the RHC live lane one of its two keys (EVMC_ALLOW_LIVE) and flips the
+   refueler's default "off" to armed (FUEL_REFUEL_MODE).
 
 Exit 0 = clean; non-zero with a report otherwise.
 """
@@ -14,6 +25,8 @@ import sys
 from pathlib import Path
 
 APP_DIR = Path(__file__).resolve().parent.parent / "helm" / "apps"
+ARM_FLAGS = ("EXEC_ARMED", "EVMC_ALLOW_LIVE", "FUEL_REFUEL_MODE")
+EXEC_ENV = "/work/data/exec.env"
 problems = []
 
 for p in sorted(APP_DIR.glob("*.yaml")):
@@ -38,9 +51,21 @@ for p in sorted(APP_DIR.glob("*.yaml")):
         for k, n in keys.items():
             if n > 1:
                 problems.append(f"{p.name}: duplicate key {k!r} x{n}")
+    # ARM-FLAG LEAK -- both directions.
+    if EXEC_ENV in text:
+        for flag in ARM_FLAGS:
+            if not re.search(rf"unset[^\n]*\b{flag}\b", text):
+                problems.append(
+                    f"{p.name}: sources {EXEC_ENV} but never unsets {flag} "
+                    f"(a bare source arms live execution)")
+    for flag in ARM_FLAGS:
+        if re.search(rf"-\s*name:\s*{flag}\b", text):
+            problems.append(f"{p.name}: passes {flag} into the container env")
 
 if problems:
     print("APP-CHECK-FAIL")
     print("\n".join(problems))
     sys.exit(1)
-print(f"APP-CHECK-OK ({len(list(APP_DIR.glob('*.yaml')))} manifests)")
+print(f"APP-CHECK-OK ({len(list(APP_DIR.glob('*.yaml')))} manifests, "
+      f"{len([p for p in APP_DIR.glob('*.yaml') if EXEC_ENV in p.read_text()])} "
+      "exec.env consumers all arm-stripped)")
