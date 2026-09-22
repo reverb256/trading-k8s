@@ -1,0 +1,44 @@
+# Values for the RHC feed relay.
+#
+# Migrated out of Docker: this ran as `docker compose up -d relay` from
+# /home/j_kro/rhc-feed (offchainlabs/nitro-node, entrypoint `relay`). The
+# container held one upstream WebSocket and re-served it as plain JSON.
+# Nothing about the workload needed a VM-level container runtime.
+
+image: offchainlabs/nitro-node:v3.11.4-7d5ac27
+imagePullPolicy: IfNotPresent
+
+# Pinned to nexus: the live consumers are host-side python watchers on nexus
+# (tools/rhc_grad_watch.py, tools/rhc_launch_watch.py) that dial
+# 127.0.0.1:9642. Host networking keeps that address working unchanged.
+nodeName: nexus
+hostNetwork: true
+
+port: 9642
+entrypoint: relay
+
+# Flags carried over verbatim from the compose file. The compression pair is
+# the reason the relay exists at all: compressed public feed in, plain JSON
+# out, so consumers do not need a deflate-capable WebSocket client.
+args:
+  - --node.feed.output.addr=0.0.0.0
+  - --node.feed.input.url=wss://feed.mainnet.chain.robinhood.com
+  - --chain.id=4663
+  - --node.feed.input.enable-compression=true
+  - --node.feed.output.enable-compression=false
+
+# The relay holds everything in memory: idle it is ~28-41 MB and ~1% of a core,
+# rising to ~71 MB with a handful of consumers attached. The 512Mi limit is the
+# compose mem_limit carried across.
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# A ClusterIP Service for in-cluster consumers. With hostNetwork the endpoints
+# resolve to the node IP:9642, which is exactly where the relay is listening.
+service:
+  enabled: true

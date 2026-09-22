@@ -1,0 +1,4 @@
+apiVersion: v2
+name: rhc-feed-relay
+description: Offchain Labs relay re-serving the Robinhood Chain public feed (Deployment on nexus)
+version: 0.1.0
