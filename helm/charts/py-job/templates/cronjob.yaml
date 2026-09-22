@@ -6,11 +6,12 @@ metadata:
 spec:
   schedule: {{ .Values.schedule | quote }}
   concurrencyPolicy: Forbid
-  successfulJobsHistoryLimit: 2
-  failedJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
   jobTemplate:
     spec:
       backoffLimit: 2
+      ttlSecondsAfterFinished: 600
       activeDeadlineSeconds: {{ .Values.deadline }}
       template:
         spec:
