@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: trading-watchdog
+  namespace: argocd
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: trading
+  source:
+    repoURL: https://github.com/reverb256/trading-k8s.git
+    targetRevision: main
+    path: helm/charts/py-job
+    helm:
+      releaseName: trading-watchdog
+      values: |
+        name: trading-watchdog
+        # 5 min, matching the pre-migration host timer's cadence. The release
+        # gate reads "no non-ok row since the halt" as health, so the witness
+        # must beat at least as often as the gate's 45-min cooldown + 30-min
+        # stabilize window; 5 min also makes a missed tick obvious.
+        schedule: "*/5 * * * *"
+        command: ["python", "tools/watchdog_k8s.py", "--once"]
+        deadline: 120
+        repoMount: true
+        configMount: false
+        # hostNetwork so the loopback status probe reaches the MCP deployment
+        # (trading-mcp is itself hostNetwork and serves :8794 on the node).
+        hostNetwork: true
+        nodeName: nexus
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+      - PruneLast=true
+      - CreateNamespace=true

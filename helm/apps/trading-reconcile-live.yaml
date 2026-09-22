@@ -16,8 +16,18 @@ spec:
       releaseName: trading-reconcile-live
       values: |
         name: trading-reconcile-live
-        schedule: "5 5 * * *"
-        command: ["python", "tools/reconcile.py", "--wallet", "Ghr7xwP6HqzYVeXAq7uToR7poUSQuJ9pB8dCeQqA5wmf", "--log", "data/exec_log.jsonl"]
+        # Every 30 min (was daily 05:05) — same reason as trading-reconcile: the
+        # release gate can only see drift in a row with ts >= halt_ts.
+        schedule: "0,30 * * * *"
+        # Sources the host exec.env at RUNTIME so the live wallet is checked
+        # against the keyed mainnet endpoint. The pre-migration host timer ran
+        # `--rpc $EXEC_RPC_URL_MAINNET` (Helius); the k8s cutover dropped that
+        # and silently fell back to the keyless public api.mainnet-beta
+        # endpoint, which rate-limits — and a false `drift: true` from a 429
+        # contaminates the release gate. `${VAR:-default}` keeps a graceful
+        # fallback if the env is ever absent. No secrets in git: the value
+        # stays in the 0600 host file, same pattern as trading-reconcile-evm.
+        command: ["sh", "-c", "set -a; . /work/data/exec.env 2>/dev/null; set +a; exec python tools/reconcile.py --wallet Ghr7xwP6HqzYVeXAq7uToR7poUSQuJ9pB8dCeQqA5wmf --log data/exec_log.jsonl --rpc '${EXEC_RPC_URL_MAINNET:-https://api.mainnet-beta.solana.com}'"]
         deadline: 600
         repoMount: true
         configMount: false
