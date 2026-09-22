@@ -1,0 +1,40 @@
+# Declarative image build (2026-09-22): kaniko builds the trading-jobs image from
+# the repo context (hostPath) and writes an OCI tar. Suspended by default --
+# trigger: kubectl create job --from=cronjob/trading-image-build build-N
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: trading-image-build
+  namespace: trading
+spec:
+  schedule: "0 0 31 2 *"   # never (Feb 31) -- manual trigger only
+  suspend: true
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 3600
+      template:
+        spec:
+          restartPolicy: Never
+          nodeSelector:
+            kubernetes.io/hostname: nexus
+          containers:
+            - name: kaniko
+              image: gcr.io/kaniko-project/executor:v1.23.2
+              args:
+                - --dockerfile=/workspace/deploy/Dockerfile.jobs
+                - --context=dir:///workspace
+                - --no-push
+                - --tar-path=/work/data/images/trading-jobs.tar
+                - --destination=trading-jobs:latest
+              volumeMounts:
+                - {name: repo, mountPath: /workspace, readOnly: true}
+                - {name: data, mountPath: /work/data}
+              resources:
+                requests: {cpu: 500m, memory: 1Gi}
+                limits: {cpu: "4", memory: 8Gi}
+          volumes:
+            - name: repo
+              hostPath: {path: /home/j_kro/Work/trading, type: Directory}
+            - name: data
+              hostPath: {path: /home/j_kro/Work/trading/data, type: Directory}

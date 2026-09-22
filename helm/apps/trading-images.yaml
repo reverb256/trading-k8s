@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: trading-images
+  namespace: argocd
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: trading
+  source:
+    repoURL: https://github.com/reverb256/trading-k8s.git
+    targetRevision: main
+    path: manifests/trading-images
+    directory: {recurse: true}
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+    syncOptions: [ApplyOutOfSyncOnly=true, CreateNamespace=true]
