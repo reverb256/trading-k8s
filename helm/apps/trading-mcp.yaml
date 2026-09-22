@@ -20,6 +20,15 @@ spec:
         workdir: "/work"
         hostNetwork: true
         nodeName: nexus
+        # The pod mounts the repo at /work (only a few subpaths sit under
+        # /home/j_kro), so the read server must not assume the host path.
+        # Resolved once at process start: mcp/trading_mcp_server.py::_resolve_base.
+        env:
+          - name: TRADING_REPO
+            value: "/work"
+        # Declarative roll knob: the base path is read at import, so a new pod
+        # is required to pick this up (replaces `kubectl rollout restart`).
+        restartedAt: "2026-09-22T18:14:08Z"
   syncPolicy:
     automated:
       prune: true
