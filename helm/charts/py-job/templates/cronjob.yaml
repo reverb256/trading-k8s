@@ -42,8 +42,24 @@ spec:
                   nvidia.com/gpu: 1
                   {{- end }}
               volumeMounts:
+                {{- if .Values.repoMount }}
+                - name: repo
+                  mountPath: /work
+                {{- else }}
                 - name: data
                   mountPath: /work/data
+                {{- end }}
+                {{- if .Values.configMount }}
+                - name: gmgncfg
+                  mountPath: /root/.config/gmgn
+                  readOnly: true
+                - name: jupcfg
+                  mountPath: /root/.config/jup
+                  readOnly: true
+                - name: tradingcfg
+                  mountPath: /root/.config/trading
+                  readOnly: true
+                {{- end }}
                 - name: stampede
                   mountPath: /stampede
                   readOnly: true
@@ -51,10 +67,31 @@ spec:
                   mountPath: /opt/rhfeed/src
                   readOnly: true
           volumes:
+            {{- if .Values.repoMount }}
+            - name: repo
+              hostPath:
+                path: /home/j_kro/Work/trading
+                type: Directory
+            {{- else }}
             - name: data
               hostPath:
                 path: {{ .Values.dataPath | default "/home/j_kro/Work/trading/data" }}
                 type: Directory
+            {{- end }}
+            {{- if .Values.configMount }}
+            - name: gmgncfg
+              hostPath:
+                path: /home/j_kro/.config/gmgn
+                type: Directory
+            - name: jupcfg
+              hostPath:
+                path: /home/j_kro/.config/jup
+                type: Directory
+            - name: tradingcfg
+              hostPath:
+                path: /home/j_kro/.config/trading
+                type: Directory
+            {{- end }}
             - name: stampede
               hostPath:
                 path: /home/j_kro/stampede/data
