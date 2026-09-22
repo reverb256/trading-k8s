@@ -50,6 +50,9 @@ spec:
             - name: stampede
               mountPath: /stampede
               readOnly: true
+            - name: stampede-home
+              mountPath: /home/j_kro/stampede/data
+              readOnly: true
             - name: rhcfeed
               mountPath: /opt/rhfeed/src
               readOnly: true
@@ -68,6 +71,10 @@ spec:
             path: /home/j_kro/Work/trading
             type: Directory
         - name: stampede
+          hostPath:
+            path: /home/j_kro/stampede/data
+            type: Directory
+        - name: stampede-home
           hostPath:
             path: /home/j_kro/stampede/data
             type: Directory
