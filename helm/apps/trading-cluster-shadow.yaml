@@ -20,6 +20,14 @@ spec:
         workdir: "/work"
         hostNetwork: false
         nodeName: nexus
+        # Declarative roll knob. This tool is the ONE writer of
+        # data/cluster_shadow.jsonl + data/cluster_shadow_mints.json and now takes
+        # a single-writer lock + writes a per-cycle heartbeat
+        # (tools/cluster_shadow.py, trading 92911c8); the code is read at process
+        # start from the hostPath repo mount, so a new pod is required to pick it
+        # up. Rolled BEFORE the host systemd writer was retired, so the owner is
+        # already the locking process and there is never a window with no writer.
+        restartedAt: "2026-09-22T20:05:00Z"
   syncPolicy:
     automated:
       prune: true
