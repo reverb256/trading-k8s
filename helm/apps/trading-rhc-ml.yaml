@@ -17,7 +17,7 @@ spec:
       values: |
         name: trading-rhc-ml
         schedule: "15 */6 * * *"
-        command: ["sh", "-c", "python", "tools/rhc_dataset.py && python tools/rhc_ml.py"]
+        command: ["sh", "-c", "python tools/rhc_dataset.py && python tools/rhc_ml.py"]
         deadline: 300
         nodeName: nexus
   syncPolicy:
