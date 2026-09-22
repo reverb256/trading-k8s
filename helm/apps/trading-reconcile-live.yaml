@@ -16,18 +16,24 @@ spec:
       releaseName: trading-reconcile-live
       values: |
         name: trading-reconcile-live
-        # Every 30 min (was daily 05:05) — same reason as trading-reconcile: the
-        # release gate can only see drift in a row with ts >= halt_ts.
+        # Every 30 min (was daily 05:05): the release gate
+        # (src/breakers.py::damage_release_vetoes) only sees drift in a row with
+        # ts >= halt_ts, so a daily cadence made the check vacuous.
         schedule: "0,30 * * * *"
-        # Sources the host exec.env at RUNTIME so the live wallet is checked
-        # against the keyed mainnet endpoint. The pre-migration host timer ran
-        # `--rpc $EXEC_RPC_URL_MAINNET` (Helius); the k8s cutover dropped that
-        # and silently fell back to the keyless public api.mainnet-beta
-        # endpoint, which rate-limits — and a false `drift: true` from a 429
-        # contaminates the release gate. `${VAR:-default}` keeps a graceful
-        # fallback if the env is ever absent. No secrets in git: the value
-        # stays in the 0600 host file, same pattern as trading-reconcile-evm.
-        command: ["sh", "-c", "set -a; . /work/data/exec.env 2>/dev/null; set +a; exec python tools/reconcile.py --wallet Ghr7xwP6HqzYVeXAq7uToR7poUSQuJ9pB8dCeQqA5wmf --log data/exec_log.jsonl --rpc '${EXEC_RPC_URL_MAINNET:-https://api.mainnet-beta.solana.com}'"]
+        # Sources the host exec.env at RUNTIME (no secret in git, same pattern as
+        # trading-reconcile-evm) for two reasons:
+        #  1. --rpc '$EXEC_RPC_URL_MAINNET' (Helius) restores what the
+        #     pre-migration host timer ran. The k8s cutover dropped the flag and
+        #     silently fell back to the keyless public mainnet endpoint.
+        #  2. EXEC_RPC_URL_FALLBACK is OVERRIDDEN to a MAINNET endpoint. The
+        #     global fallback in exec.env is solana-devnet.g.alchemy.com — so a
+        #     mainnet failover queried the WRONG CHAIN. A devnet endpoint cannot
+        #     see mainnet signatures: if it answers (instead of 429ing like it
+        #     did on 2026-09-22 13:09) every logged send reads "unconfirmed" ->
+        #     a FALSE drift:true, which contaminates the release gate. Verified
+        #     failure 2026-09-22T18:00Z: job trading-reconcile-live-29835000
+        #     BackoffLimitExceeded on HTTP 429 from primary AND fallback.
+        command: ["sh", "-c", "set -a; . /work/data/exec.env 2>/dev/null; set +a; export EXEC_RPC_URL_FALLBACK='https://api.mainnet-beta.solana.com'; exec python tools/reconcile.py --wallet Ghr7xwP6HqzYVeXAq7uToR7poUSQuJ9pB8dCeQqA5wmf --log data/exec_log.jsonl --rpc '$EXEC_RPC_URL_MAINNET'"]
         deadline: 600
         repoMount: true
         configMount: false

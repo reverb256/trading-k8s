@@ -17,13 +17,18 @@ spec:
       values: |
         name: trading-reconcile
         # Every 30 min (was daily 04:45). The release gate
-        # (src/daemon.py::_halt_contaminated) only flags drift from a row with
+        # (src/breakers.py::damage_release_vetoes) only counts rows with
         # ts >= halt_ts, so a daily cadence made "no drift since the halt"
         # vacuous for every halt between one run and the next. Cost is one
         # getSignaturesForAddress call per run (reconcile.py pages only when a
         # wallet exceeds --limit), so 48 runs/day stays inside RPC budgets.
         schedule: "15,45 * * * *"
-        command: ["python", "tools/reconcile.py", "--wallet", "5qUpL8vDkBANtoaFfSvCRysa8MkndJNLu1dKsHfxUPZv", "--log", "data/exec_log.jsonl"]
+        # Sources exec.env at runtime for the RPC failover: without it
+        # EXEC_RPC_URL_FALLBACK is unset in the pod, so a 429 on the primary
+        # devnet endpoint fails the job outright and leaves NO row — the gate
+        # then reads a stale ledger as clean. The env's fallback is Alchemy
+        # devnet, i.e. the CORRECT chain for this devnet wallet.
+        command: ["sh", "-c", "set -a; . /work/data/exec.env 2>/dev/null; set +a; exec python tools/reconcile.py --wallet 5qUpL8vDkBANtoaFfSvCRysa8MkndJNLu1dKsHfxUPZv --log data/exec_log.jsonl"]
         deadline: 600
         repoMount: true
         configMount: false
