@@ -18,6 +18,7 @@ spec:
         name: trading-mcp
         command: ["python", "/work/mcp/trading_mcp_server.py"]
         workdir: "/work"
+        initCommand: ["pip", "install", "--quiet", "mcp<2"]
         hostNetwork: true
         nodeName: nexus
   syncPolicy:

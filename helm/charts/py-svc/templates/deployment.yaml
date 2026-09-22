@@ -24,6 +24,16 @@ spec:
       {{- end }}
       nodeSelector:
         kubernetes.io/hostname: {{ .Values.nodeName }}
+      {{- if .Values.initCommand }}
+      initContainers:
+        - name: init-deps
+          image: {{ .Values.image }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          command: {{ toJson .Values.initCommand }}
+          volumeMounts:
+            - name: repo
+              mountPath: /work
+      {{- end }}
       containers:
         - name: svc
           image: {{ .Values.image }}
