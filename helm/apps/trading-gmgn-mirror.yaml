@@ -16,8 +16,9 @@ spec:
       releaseName: trading-gmgn-mirror
       values: |
         name: trading-gmgn-mirror
-        schedule: "*/5 * * * *"
+        schedule: "2-59/5 * * * *"   # GMGN stagger: offset off the :00/:05 cluster burst
         command: ["python", "tools/gmgn_mirror.py"]
+        backoffLimit: 0   # never re-run a whole sweep: a retry is more requests
         deadline: 240
         repoMount: true
         configMount: true

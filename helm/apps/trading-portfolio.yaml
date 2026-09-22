@@ -16,8 +16,9 @@ spec:
       releaseName: trading-portfolio
       values: |
         name: trading-portfolio
-        schedule: "*/15 * * * *"
+        schedule: "11-59/15 * * * *"   # GMGN stagger: share the 15-min slot one job at a time
         command: ["python", "tools/portfolio_watch.py"]
+        backoffLimit: 0   # never re-run a whole sweep: a retry is more requests
         deadline: 240
         nodeName: nexus
   syncPolicy:
