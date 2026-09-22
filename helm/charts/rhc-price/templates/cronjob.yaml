@@ -21,6 +21,31 @@ spec:
             - name: rhc-price
               image: {{ .Values.image }}
               imagePullPolicy: {{ .Values.imagePullPolicy }}
+              resources:
+                # Policy (t_6cf16590) - CronJob pods ARE requests-sized, and this
+                # workload is the case that proves it: the sampler is CPU-bound
+                # (its own cumulative counter goes 0.07 -> 26.12 cpu-seconds
+                # inside a single ~30 s run = 0.87 cores sustained), so the
+                # 10m/64Mi `default-requests` LimitRange floor it used to inherit
+                # is a floor, not a size.  Before t_5edaea07 this container had NO
+                # `resources:` block at all, which is why no values key could have
+                # sized it.
+                # Sizing convention (cluster-wide, see
+                # media-k8s cluster/addons/default-requests/README.md): p95 from
+                # VictoriaMetrics, 7d window at 5m resolution, MAX over every pod
+                # incarnation of the workload, cpu rounded up to the next 10m and
+                # memory to the next 16Mi, with request <= limit.
+                # Own p95 over 438 incarnations: cpu 868.27m, memory 163.51Mi ->
+                # 870m / 176Mi, set per workload in
+                # helm/apps/trading-rhc-price.yaml (cpuRequest / memRequest).
+                # Requests only: this chart declares no limits at all, so
+                # `request <= limit` is not binding here and the limit question
+                # belongs to the separate limit pass (t_56f17002).  The 10m/64Mi
+                # defaults below render exactly the floor the LimitRange was
+                # already applying, so an app that sets nothing is unchanged.
+                requests:
+                  cpu: {{ .Values.cpuRequest | default "10m" }}
+                  memory: {{ .Values.memRequest | default "64Mi" }}
               volumeMounts:
                 - name: data
                   mountPath: /work/data

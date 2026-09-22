@@ -16,6 +16,20 @@ spec:
     path: helm/charts/rhc-price
     helm:
       releaseName: rhc-price
+      values: |
+        # Requests-sized from this workload's OWN p95 (t_5edaea07), never from a
+        # namespace-wide number: 7d window at 5m resolution, max over every pod
+        # incarnation, cpu -> next 10m, memory -> next 16Mi.
+        #   cpu    868.27m  worst incarnation trading-rhc-price-29834905-p9pb9
+        #                  (its cumulative counter goes 0.07 -> 26.12 cpu-seconds
+        #                  inside one ~30 s run, i.e. ~0.87 cores sustained)
+        #   memory 163.51Mi worst incarnation trading-rhc-price-29834895-2psmw
+        # -> 870m / 176Mi.  Requests only: the chart declares no limits at all, so
+        # `request <= limit` is not binding here and limits are the separate pass
+        # (t_56f17002).  The chart's 10m/64Mi defaults render exactly the
+        # `default-requests` LimitRange floor this container used to inherit.
+        cpuRequest: 870m
+        memRequest: 176Mi
   syncPolicy:
     automated:
       prune: true
