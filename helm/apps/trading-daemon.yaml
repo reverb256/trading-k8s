@@ -19,7 +19,6 @@ spec:
         command: ["python", "-u", "daemon.py"]
         workdir: "/work/src"
         hostNetwork: true
-        hostNetwork: false
         nodeName: nexus
   syncPolicy:
     automated:
