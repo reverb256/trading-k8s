@@ -16,10 +16,19 @@ spec:
       releaseName: trading-grad-momentum
       values: |
         name: trading-grad-momentum
-        schedule: "*/2 * * * *"
+        schedule: "*/5 * * * *"
         command: ["python", "tools/grad_momentum.py"]
         gpu: false
         deadline: 180
+        env:
+          - name: GOVERNED_POLL
+            value: "1"
+        trigger:
+          kind: "external-poll"
+          justification: "samples fresh graduations only; the graduation feed is the head"
+          governor: "governed_poll"
+          change-detection: true
+          staleness-floor: "none"
   syncPolicy:
     automated:
       prune: true

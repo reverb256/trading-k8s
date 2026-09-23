@@ -20,6 +20,16 @@ spec:
         command: ["python", "tools/regime.py"]
         deadline: 240
         nodeName: nexus
+        env:
+          - name: GOVERNED_POLL
+            value: "1"
+        trigger:
+          kind: "derived"
+          justification: "regime is derived from the memecoin heat feed + 24 h price change; the hourly floor keeps the entry gate's input fresh"
+          invalidated-by: "data/pumpfun_stats.jsonl (heat feed)"
+          governor: "governed_poll"
+          change-detection: true
+          staleness-floor: 3600
   syncPolicy:
     automated:
       prune: true

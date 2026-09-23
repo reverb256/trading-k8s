@@ -20,6 +20,10 @@ spec:
         command: ["python", "tools/grad_ml.py"]
         gpu: true
         deadline: 600
+        trigger:
+          kind: "calendar"
+          justification: "retrains the graduation model on accumulated data (6 h batch)"
+          mutates: "study-only"
   syncPolicy:
     automated:
       prune: true

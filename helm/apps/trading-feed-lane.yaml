@@ -23,6 +23,11 @@ spec:
         cpuRequest: 20m
         deadline: 180
         hostNetwork: true
+        trigger:
+          kind: "event"
+          justification: "short listener window on the RHC feed relay, appending to data/feed_lane.jsonl; the schedule re-arms the window (a long-lived subscription is filed as remaining work)"
+          event-source: "feed_lane.jsonl"
+          rearm: "listener"
   syncPolicy:
     automated:
       prune: true

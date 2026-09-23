@@ -29,6 +29,10 @@ spec:
         # Declarative roll knob: the base path is read at import, so a new pod
         # is required to pick this up (replaces `kubectl rollout restart`).
         restartedAt: "2026-09-22T19:56:00Z"
+        trigger:
+          kind: "service"
+          justification: "read-only status MCP server; answers requests, never polls"
+          liveness-verifier: "trading-watchdog (MCP status probe)"
   syncPolicy:
     automated:
       prune: true

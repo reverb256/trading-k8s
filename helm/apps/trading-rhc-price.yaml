@@ -30,6 +30,15 @@ spec:
         # `default-requests` LimitRange floor this container used to inherit.
         cpuRequest: 870m
         memRequest: 176Mi
+        env:
+          - name: GOVERNED_POLL
+            value: "1"
+        trigger:
+          kind: "external-poll"
+          justification: "samples bonding-curve reserves for the mints we already hold - the cheap head is the RHC block head"
+          governor: "governed_poll"
+          change-detection: true
+          staleness-floor: "none"
   syncPolicy:
     automated:
       prune: true

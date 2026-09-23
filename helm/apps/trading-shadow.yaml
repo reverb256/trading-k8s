@@ -20,6 +20,10 @@ spec:
         workdir: "/work"
         hostNetwork: false
         nodeName: nexus
+        trigger:
+          kind: "service"
+          justification: "meta-model shadow scorer on its own --loop 60 cycle (read-only, no orders)"
+          liveness-verifier: "trading-watchdog (stack-level) - a per-pass witness is filed as remaining work in docs/EVENT-DRIVEN.md"
   syncPolicy:
     automated:
       prune: true

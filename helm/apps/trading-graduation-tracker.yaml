@@ -24,6 +24,15 @@ spec:
         cpuRequest: 20m
         gpu: false
         deadline: 420
+        env:
+          - name: GOVERNED_POLL
+            value: "1"
+        trigger:
+          kind: "external-poll"
+          justification: "resolves outcomes for new firehose migrate events; no new event means nothing to resolve, the 30-min floor prices pending outcomes"
+          governor: "governed_poll"
+          change-detection: true
+          staleness-floor: 1800
   syncPolicy:
     automated:
       prune: true

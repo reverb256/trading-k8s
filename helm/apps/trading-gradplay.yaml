@@ -20,6 +20,15 @@ spec:
         command: ["python", "tools/gradplay_strategy.py"]
         gpu: false
         deadline: 300
+        env:
+          - name: GOVERNED_POLL
+            value: "1"
+        trigger:
+          kind: "external-poll"
+          justification: "entry feed is data/graduations.jsonl: no new graduation means nothing to enter; the 30-min floor still marks open positions"
+          governor: "governed_poll"
+          change-detection: true
+          staleness-floor: 1800
   syncPolicy:
     automated:
       prune: true

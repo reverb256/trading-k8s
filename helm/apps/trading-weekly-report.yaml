@@ -23,6 +23,10 @@ spec:
         configMount: false
         hostNetwork: false
         nodeName: nexus
+        trigger:
+          kind: "calendar"
+          justification: "the weekly loss report is a calendar artifact"
+          mutates: "reports"
   syncPolicy:
     automated:
       prune: true

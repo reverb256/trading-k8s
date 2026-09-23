@@ -28,6 +28,10 @@ spec:
         # up. Rolled BEFORE the host systemd writer was retired, so the owner is
         # already the locking process and there is never a window with no writer.
         restartedAt: "2026-09-22T20:05:00Z"
+        trigger:
+          kind: "service"
+          justification: "single-writer forward-test shadow; its own --loop 600 cycle"
+          liveness-verifier: "gates_missing G4 (per-cycle heartbeat advancing, exactly one writer)"
   syncPolicy:
     automated:
       prune: true

@@ -54,6 +54,10 @@ spec:
         # Declarative roll knob: bump to roll the daemon (it imports code at startup,
         # so a new pod is required to pick up repo changes).
         restartedAt: "2026-09-23T08:26:12Z"
+        trigger:
+          kind: "service"
+          justification: "the paper daemon's own load-dependent ~25-110 s cycle; a service, never a timer"
+          liveness-verifier: "trading-watchdog (daemon heartbeat age)"
   syncPolicy:
     automated:
       prune: true

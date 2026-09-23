@@ -3,6 +3,12 @@ kind: CronJob
 metadata:
   name: trading-rhc-price
   namespace: {{ .Release.Namespace }}
+  {{- with .Values.trigger }}
+  annotations:
+    {{- range $k, $v := . }}
+    trading.dev/trigger-{{ $k }}: {{ $v | quote }}
+    {{- end }}
+  {{- end }}
 spec:
   schedule: {{ .Values.schedule | quote }}
   concurrencyPolicy: Forbid
@@ -20,6 +26,14 @@ spec:
           containers:
             - name: rhc-price
               image: {{ .Values.image }}
+              env:
+                # env (list of {name, value}) - same shape as py-job/py-svc; empty renders
+                # nothing. GOVERNED_POLL=1 is what makes the change-detection gate engage
+                # in the scheduled copy (docs/EVENT-DRIVEN.md).
+                {{- range .Values.env }}
+                - name: {{ .name }}
+                  value: {{ .value | quote }}
+                {{- end }}
               imagePullPolicy: {{ .Values.imagePullPolicy }}
               resources:
                 # Policy (t_6cf16590) - CronJob pods ARE requests-sized, and this

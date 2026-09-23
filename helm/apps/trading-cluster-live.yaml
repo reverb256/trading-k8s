@@ -1,3 +1,14 @@
+# ArgoCD Application: trading-cluster-live
+# The RHC mirror, FILL-DRIVEN since 2026-09-23. This was a `*/5 * * * *` CronJob
+# whose timer was the only reason it ran. The only trigger now is a real
+# sleeve-D BUY fill appearing in the daemon's ledger; with the daemon HALTED
+# there are no fills, so the lane stops buying BY DESIGN.
+#   before: CronJob */5 * * * * - 39 sends since 09-19, 3 of them on 09-23 with
+#           zero sleeve-D fills to mirror (data/evm_spend.json grew)
+#   after:  one long-lived watcher (tools/cluster_live.py --watch) driven by the
+#           fill head through tools/governed_poll.py (coalesced, cached, adaptive
+#           backoff). Its absence verifier is the trading-watchdog CronJob.
+# Trigger is not the work: docs/EVENT-DRIVEN.md, enforced by tools/trigger_gate.py.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -11,18 +22,23 @@ spec:
   source:
     repoURL: https://github.com/reverb256/trading-k8s.git
     targetRevision: main
-    path: helm/charts/py-job
+    path: helm/charts/py-svc
     helm:
       releaseName: trading-cluster-live
       values: |
         name: trading-cluster-live
-        schedule: "*/5 * * * *"
-        command: ["python", "tools/cluster_live.py"]
-        deadline: 240
-        repoMount: true
-        configMount: false
+        command: ["python", "-u", "tools/cluster_live.py", "--watch"]
+        workdir: "/work"
         hostNetwork: false
         nodeName: nexus
+        # Requests only, from this workload's own observed cost: the watcher is a 20 s
+        # tick around one indexed scalar read per backoff window, not a 5-min sweep.
+        cpuRequest: 50m
+        memRequest: 128Mi
+        trigger:
+          kind: "event"
+          justification: "MONEY LANE: the only trigger is a real sleeve-D BUY fill in the daemon's ledger (data/signals.sqlite, strategy D, side buy) - no fill, no mirror. A halted daemon produces no fills, so the lane stops buying by design."
+          event-source: "signals.sqlite"
   syncPolicy:
     automated:
       prune: true

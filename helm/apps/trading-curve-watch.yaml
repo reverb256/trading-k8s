@@ -16,10 +16,19 @@ spec:
       releaseName: trading-curve-watch
       values: |
         name: trading-curve-watch
-        schedule: "*/3 * * * *"
+        schedule: "*/5 * * * *"
         command: ["python", "tools/curve_watch.py"]
         gpu: false
         deadline: 240
+        env:
+          - name: GOVERNED_POLL
+            value: "1"
+        trigger:
+          kind: "external-poll"
+          justification: "curve positions move with the RHC head; act only when the head moves"
+          governor: "governed_poll"
+          change-detection: true
+          staleness-floor: "none"
   syncPolicy:
     automated:
       prune: true

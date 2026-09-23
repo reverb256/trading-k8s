@@ -29,6 +29,11 @@ spec:
         # (trading-mcp is itself hostNetwork and serves :8794 on the node).
         hostNetwork: true
         nodeName: nexus
+        trigger:
+          kind: "absence"
+          justification: "the one slow verifier: asserts daemon heartbeat age, MCP reachability and the fill-driven mirror's witness age; never re-does any work"
+          verifies: "daemon heartbeat age (300 s), MCP status, mirror witness age and last mirror fault"
+          mutates: "none"
   syncPolicy:
     automated:
       prune: true

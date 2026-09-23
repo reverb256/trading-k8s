@@ -23,6 +23,10 @@ spec:
         configMount: false
         hostNetwork: false
         nodeName: nexus
+        trigger:
+          kind: "calendar"
+          justification: "batch study over accumulated attention rows (6 h window)"
+          mutates: "study-only"
   syncPolicy:
     automated:
       prune: true

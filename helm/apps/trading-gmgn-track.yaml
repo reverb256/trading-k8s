@@ -16,7 +16,7 @@ spec:
       releaseName: trading-gmgn-track
       values: |
         name: trading-gmgn-track
-        schedule: "* * * * *"
+        schedule: "2-59/5 * * * *"
         command: ["python", "tools/gmgn_track.py"]
         backoffLimit: 0   # never re-run a whole sweep: a retry is more requests
         deadline: 55
@@ -24,6 +24,15 @@ spec:
         configMount: true
         hostNetwork: false
         nodeName: nexus
+        env:
+          - name: GOVERNED_POLL
+            value: "1"
+        trigger:
+          kind: "external-poll"
+          justification: "tracks smart-money around OUR positions: the book (fills) is the head; GMGN traffic itself is governed by gmgn_common"
+          governor: "governed_poll"
+          change-detection: true
+          staleness-floor: 900
   syncPolicy:
     automated:
       prune: true

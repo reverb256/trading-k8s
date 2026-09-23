@@ -23,6 +23,15 @@ spec:
         configMount: true
         hostNetwork: false
         nodeName: nexus
+        env:
+          - name: GOVERNED_POLL
+            value: "1"
+        trigger:
+          kind: "external-poll"
+          justification: "dry-run perps executor: the price series is its head (live is still refused in code)"
+          governor: "governed_poll"
+          change-detection: true
+          staleness-floor: 3600
   syncPolicy:
     automated:
       prune: true

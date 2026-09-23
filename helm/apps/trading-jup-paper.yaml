@@ -20,6 +20,15 @@ spec:
         command: ["python", "tools/jup_perps.py", "--paper-run"]
         deadline: 240
         nodeName: nexus
+        env:
+          - name: GOVERNED_POLL
+            value: "1"
+        trigger:
+          kind: "external-poll"
+          justification: "paper perps marks move with the price series; no new sample means nothing to mark"
+          governor: "governed_poll"
+          change-detection: true
+          staleness-floor: 3600
   syncPolicy:
     automated:
       prune: true

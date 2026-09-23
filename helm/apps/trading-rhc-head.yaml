@@ -20,6 +20,10 @@ spec:
         workdir: "/work"
         hostNetwork: false
         nodeName: nexus
+        trigger:
+          kind: "service"
+          justification: "RHC head sensing instrument (0.2 s keep-alive poll) - the cheap head the whole lane reads"
+          liveness-verifier: "gates_run G13 (rhc head watcher active and fresh)"
   syncPolicy:
     automated:
       prune: true

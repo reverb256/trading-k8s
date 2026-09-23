@@ -20,6 +20,10 @@ spec:
         command: ["python", "tools/graduation_study.py"]
         gpu: false
         deadline: 300
+        trigger:
+          kind: "calendar"
+          justification: "batch study over accumulated graduations (6 h window)"
+          mutates: "study-only"
   syncPolicy:
     automated:
       prune: true

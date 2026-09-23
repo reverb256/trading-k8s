@@ -20,6 +20,10 @@ spec:
         command: ["sh", "-c", "python tools/rhc_dataset.py && python tools/rhc_ml.py"]
         deadline: 300
         nodeName: nexus
+        trigger:
+          kind: "calendar"
+          justification: "builds the RHC dataset and retrains (6 h batch)"
+          mutates: "study-only"
   syncPolicy:
     automated:
       prune: true
