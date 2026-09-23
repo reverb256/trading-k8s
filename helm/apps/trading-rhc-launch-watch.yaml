@@ -16,7 +16,7 @@ spec:
       releaseName: trading-rhc-launch-watch
       values: |
         name: trading-rhc-launch-watch
-        schedule: "* * * * *"
+        schedule: "4-59/5 * * * *"
         command: ["python", "tools/rhc_launch_watch.py", "--seconds", "52"]
         # Requests-sized per workload (t_6cf16590): own 7d/5m p95 16.1m over 1109
         # incarnations (113 of them >10m), cpu -> next 10m. Memory p95 59.3Mi is
@@ -24,6 +24,15 @@ spec:
         cpuRequest: 20m
         deadline: 120
         hostNetwork: true
+        env:
+          - name: GOVERNED_POLL
+            value: "1"
+        trigger:
+          kind: "external-poll"
+          justification: "launches appear as blocks advance; the head is the only trigger that matters, and a 15-min floor keeps the book sampled if the chain stalls"
+          governor: "governed_poll"
+          change-detection: true
+          staleness-floor: 900
   syncPolicy:
     automated:
       prune: true

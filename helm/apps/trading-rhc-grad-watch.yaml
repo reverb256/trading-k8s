@@ -16,7 +16,7 @@ spec:
       releaseName: trading-rhc-grad-watch
       values: |
         name: trading-rhc-grad-watch
-        schedule: "* * * * *"
+        schedule: "3-59/5 * * * *"
         command: ["python", "tools/rhc_grad_watch.py", "--tail", "45"]
         # Requests-sized per workload (t_6cf16590): own 7d/5m p95 15.8m over 852
         # incarnations (151 of them >10m), cpu -> next 10m. Memory p95 50.4Mi is
@@ -25,6 +25,15 @@ spec:
         deadline: 75
         hostNetwork: true
         nodeName: nexus
+        env:
+          - name: GOVERNED_POLL
+            value: "1"
+        trigger:
+          kind: "external-poll"
+          justification: "graduations are read off the RHC head; unchanged head means nothing to read"
+          governor: "governed_poll"
+          change-detection: true
+          staleness-floor: "none"
   syncPolicy:
     automated:
       prune: true

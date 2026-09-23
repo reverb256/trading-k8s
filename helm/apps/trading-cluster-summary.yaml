@@ -20,6 +20,16 @@ spec:
         command: ["python", "tools/cluster_summary.py"]
         gpu: false
         deadline: 180
+        env:
+          - name: GOVERNED_POLL
+            value: "1"
+        trigger:
+          kind: "derived"
+          justification: "summary is a pure function of resolved shadow outcomes; recompute when the shadow file changes, 2 h floor for freshness of the report"
+          invalidated-by: "data/cluster_shadow.jsonl (resolved outcomes)"
+          governor: "governed_poll"
+          change-detection: true
+          staleness-floor: 7200
   syncPolicy:
     automated:
       prune: true

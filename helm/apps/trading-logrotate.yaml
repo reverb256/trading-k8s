@@ -23,6 +23,10 @@ spec:
         configMount: false
         hostNetwork: false
         nodeName: nexus
+        trigger:
+          kind: "calendar"
+          justification: "daily log maintenance - not trading state"
+          mutates: "ops"
   syncPolicy:
     automated:
       prune: true

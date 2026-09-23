@@ -23,6 +23,11 @@ spec:
         dataPath: /home/j_kro/feed-data
         repoMount: false
         rhfeedPath: /home/j_kro/rhc-feed/src
+        trigger:
+          kind: "event"
+          justification: "standby forge listener on the RHC feed relay (wss://feed.mainnet.chain.robinhood.com) writing the forge copy of the feed; the schedule re-arms the window"
+          event-source: "feed_lane.jsonl"
+          rearm: "listener"
   syncPolicy:
     automated:
       prune: true

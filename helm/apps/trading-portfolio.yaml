@@ -21,6 +21,16 @@ spec:
         backoffLimit: 0   # never re-run a whole sweep: a retry is more requests
         deadline: 240
         nodeName: nexus
+        env:
+          - name: GOVERNED_POLL
+            value: "1"
+        trigger:
+          kind: "derived"
+          justification: "the equity trace is derived state: recompute when the book moves, with a 30-min floor so the sample the guards read is never stale"
+          invalidated-by: "data/signals.sqlite fills (our book) and data/evm_moonbags.json"
+          governor: "governed_poll"
+          change-detection: true
+          staleness-floor: 1800
   syncPolicy:
     automated:
       prune: true

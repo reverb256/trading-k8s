@@ -42,6 +42,11 @@ spec:
         configMount: false
         hostNetwork: false
         nodeName: nexus
+        trigger:
+          kind: "absence"
+          justification: "live-wallet twin of trading-reconcile; asserts agreement, never sends"
+          verifies: "live wallet-vs-exec_log agreement"
+          mutates: "none"
   syncPolicy:
     automated:
       prune: true

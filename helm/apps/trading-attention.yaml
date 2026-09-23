@@ -20,6 +20,15 @@ spec:
         command: ["python", "tools/attention_watch.py"]
         gpu: false
         deadline: 180
+        env:
+          - name: GOVERNED_POLL
+            value: "1"
+        trigger:
+          kind: "external-poll"
+          justification: "the crawl is the probe (two free GETs, no key) and the observed feed identity is the head: an identical feed records nothing"
+          governor: "governed_poll"
+          change-detection: true
+          staleness-floor: 3600
   syncPolicy:
     automated:
       prune: true

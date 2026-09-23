@@ -34,6 +34,11 @@ spec:
         configMount: false
         hostNetwork: false
         nodeName: nexus
+        trigger:
+          kind: "absence"
+          justification: "asserts wallet-vs-log agreement and re-reads only unresolved rows; never sends"
+          verifies: "Solana wallet-vs-exec_log agreement and the age of the newest reconciled row"
+          mutates: "none"
   syncPolicy:
     automated:
       prune: true

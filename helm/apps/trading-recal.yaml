@@ -23,6 +23,10 @@ spec:
         configMount: false
         hostNetwork: false
         nodeName: nexus
+        trigger:
+          kind: "calendar"
+          justification: "weekly breaker recalibration over accumulated outcomes"
+          mutates: "study-only"
   syncPolicy:
     automated:
       prune: true

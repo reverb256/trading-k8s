@@ -20,6 +20,10 @@ spec:
         workdir: "/work"
         hostNetwork: false
         nodeName: nexus
+        trigger:
+          kind: "service"
+          justification: "firehose listener writing data/pumpfun_watch.jsonl"
+          liveness-verifier: "trading-graduation-tracker (its feed head) + gate G17"
   syncPolicy:
     automated:
       prune: true

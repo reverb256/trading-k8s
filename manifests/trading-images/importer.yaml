@@ -16,6 +16,10 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
+  annotations:
+    trading.dev/trigger-kind: "calendar"
+    trading.dev/trigger-justification: "suspended, operator-run image build/import: host-side ops, not trading work; suspend: true keeps the placeholder calendar off"
+    trading.dev/trigger-mutates: "ops"
   name: trading-image-import
   namespace: trading
 spec:

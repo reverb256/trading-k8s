@@ -23,6 +23,10 @@ spec:
         configMount: false
         hostNetwork: false
         nodeName: nexus
+        trigger:
+          kind: "calendar"
+          justification: "the daily digest is a calendar artifact: 'a day passed' is the trigger"
+          mutates: "reports"
   syncPolicy:
     automated:
       prune: true

@@ -24,6 +24,12 @@ spec:
         configMount: true
         hostNetwork: false
         nodeName: nexus
+        trigger:
+          kind: "external-poll"
+          justification: "trench strategy reads the GMGN trenches snapshot through the governed caller"
+          governor: "gmgn_common"
+          change-detection: "cache"
+          staleness-floor: "none"
   syncPolicy:
     automated:
       prune: true

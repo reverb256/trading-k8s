@@ -3,6 +3,12 @@ kind: CronJob
 metadata:
   name: {{ .Values.name }}
   namespace: {{ .Release.Namespace }}
+  {{- with .Values.trigger }}
+  annotations:
+    {{- range $k, $v := . }}
+    trading.dev/trigger-{{ $k }}: {{ $v | quote }}
+    {{- end }}
+  {{- end }}
 spec:
   schedule: {{ .Values.schedule | quote }}
   concurrencyPolicy: Forbid

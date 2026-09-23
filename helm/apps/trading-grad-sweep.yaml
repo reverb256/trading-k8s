@@ -20,6 +20,10 @@ spec:
         command: ["python", "tools/grad_sweep.py"]
         gpu: true
         deadline: 1200
+        trigger:
+          kind: "calendar"
+          justification: "daily parameter sweep over accumulated data"
+          mutates: "study-only"
   syncPolicy:
     automated:
       prune: true

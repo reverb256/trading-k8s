@@ -20,6 +20,10 @@ spec:
         workdir: "/work"
         hostNetwork: true
         nodeName: nexus
+        trigger:
+          kind: "service"
+          justification: "long-lived A2A alert receiver (port 9799); no work schedule, k8s restartPolicy + readiness are its liveness"
+          liveness-verifier: "k8s readiness/restartPolicy"
   syncPolicy:
     automated:
       prune: true

@@ -23,6 +23,12 @@ spec:
         configMount: false
         hostNetwork: false
         nodeName: nexus
+        trigger:
+          kind: "external-poll"
+          justification: "moonbag marks read the GMGN/RHC data already cached by the governed callers"
+          governor: "gmgn_common"
+          change-detection: "cache"
+          staleness-floor: "none"
   syncPolicy:
     automated:
       prune: true

@@ -23,6 +23,16 @@ spec:
         configMount: false
         hostNetwork: false
         nodeName: nexus
+        env:
+          - name: GOVERNED_POLL
+            value: "1"
+        trigger:
+          kind: "derived"
+          justification: "sleeve multipliers are a function of closed trades; recompute when the fill ledger moves"
+          invalidated-by: "data/signals.sqlite fills (closed-trade returns)"
+          governor: "governed_poll"
+          change-detection: true
+          staleness-floor: "none"
   syncPolicy:
     automated:
       prune: true

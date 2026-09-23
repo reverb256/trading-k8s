@@ -24,6 +24,12 @@ spec:
         configMount: true
         hostNetwork: false
         nodeName: nexus
+        trigger:
+          kind: "external-poll"
+          justification: "GMGN flow is a push-less vendor feed: coalescing + shared TTL cache + pacing make duplicate polls free, and the cache IS the change gate"
+          governor: "gmgn_common"
+          change-detection: "cache"
+          staleness-floor: "none"
   syncPolicy:
     automated:
       prune: true

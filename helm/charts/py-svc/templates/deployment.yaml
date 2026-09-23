@@ -5,6 +5,12 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Values.name }}
+  {{- with .Values.trigger }}
+  annotations:
+    {{- range $k, $v := . }}
+    trading.dev/trigger-{{ $k }}: {{ $v | quote }}
+    {{- end }}
+  {{- end }}
 spec:
   replicas: 1
   strategy:
