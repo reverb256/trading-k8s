@@ -25,15 +25,26 @@ spec:
         # `rpc=https://api.devnet.solana.com` instead of the keyed endpoint, and
         # the live canary lane lost EXEC_RPC_URL_MAINNET (src/canary_exec.py).
         #
-        # THE `unset` IS MANDATORY. exec.env also carries EXEC_ARMED=1,
-        # EVMC_ALLOW_LIVE=1 and FUEL_REFUEL_MODE=armed; config/exec.yaml already
-        # says `armed: true`, and the two-key rule is
-        # (EXEC_ARMED truthy) AND (cfg.armed), so a bare source ARMS the devnet
-        # send path on pod start. EVMC_ALLOW_LIVE=1 is one of the RHC live
-        # lane's two keys and FUEL_REFUEL_MODE=armed turns the refueler on.
-        # Stripping the three keeps `armed: false`, which is the REQUIRED state:
-        # the breaker stays halted and nothing is resumed.
-        command: ["sh", "-c", "set -a; . /work/data/exec.env 2>/dev/null; set +a; unset EXEC_ARMED EVMC_ALLOW_LIVE FUEL_REFUEL_MODE; exec python -u /work/src/daemon.py"]
+        # THE `unset` IS STILL MANDATORY for the SOL path. exec.env carries
+        # EXEC_ARMED=1, EVMC_ALLOW_LIVE=1 and FUEL_REFUEL_MODE=armed;
+        # config/exec.yaml already says `armed: true`, so the SOL two-key
+        # (EXEC_ARMED truthy) AND (cfg.armed) is one variable away, and
+        # FUEL_REFUEL_MODE=armed flips the refueler's default off to armed.
+        # Both stay stripped. The breaker stays halted and nothing is resumed.
+        #
+        # THE RHC ARM (owner decision 2026-09-23, CAPITAL-LADDER.md Q7+Q8).
+        # EVMC_ALLOW_LIVE=1 is the FIRST key of the RHC live lane's two-key
+        # (src/evm_executor.py::resolve_mode -- it needs this AND a caller
+        # passing mode="live", which src/evm_canary.py::_execute_buy does
+        # deliberately, against config/evm_canary.yaml `enabled: true`).
+        # Without it the daemon's RHC mirror logs `[EVMCANARY] RHC mirror
+        # ACTIVE` and every real buy dies at resolve_mode -> recorded
+        # `blocked`, never sent: the ACTIVE-but-cannot-send defect Q8 fixed.
+        # It is re-exported EXPLICITLY (not left to `set -a; . exec.env`)
+        # so the one place that arms this lane is greppable in git, and
+        # scripts/check_apps.py enforces exactly that. Size is unchanged:
+        # trade_usd 0.8, max_per_trade_eth 0.0015, max_sends_per_hour 6.
+        command: ["sh", "-c", "set -a; . /work/data/exec.env 2>/dev/null; set +a; unset EXEC_ARMED FUEL_REFUEL_MODE; export EVMC_ALLOW_LIVE=1; exec python -u /work/src/daemon.py"]
         workdir: "/work/src"
         hostNetwork: true
         nodeName: nexus
@@ -42,7 +53,7 @@ spec:
             value: "0.0.0.0:9797"
         # Declarative roll knob: bump to roll the daemon (it imports code at startup,
         # so a new pod is required to pick up repo changes).
-        restartedAt: "2026-09-22T22:27:00Z"
+        restartedAt: "2026-09-23T08:26:12Z"
   syncPolicy:
     automated:
       prune: true
