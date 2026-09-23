@@ -31,6 +31,7 @@ spec:
         workdir: "/work"
         hostNetwork: false
         nodeName: nexus
+        restartedAt: "2026-09-23T05:28:05-05:00"
         # Requests only, from this workload's own observed cost: the watcher is a 20 s
         # tick around one indexed scalar read per backoff window, not a 5-min sweep.
         cpuRequest: 50m
