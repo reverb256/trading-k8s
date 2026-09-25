@@ -42,8 +42,6 @@ spec:
         env:
           - name: HALT_ALERTS_PEER_FILE
             value: "/work/data/halt_peer.env"
-          - name: GOVERNED_POLL
-            value: "1"
         trigger:
           kind: "event"
           justification: "drains the halt-alert source (cursor-driven) and delivers it A2A; the schedule only RE-ARMS a time-critical drain window (60 s bound for a halt)"
