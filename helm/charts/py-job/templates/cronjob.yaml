@@ -35,6 +35,15 @@ spec:
           {{- end }}
           nodeSelector:
             kubernetes.io/hostname: {{ .Values.nodeName }}
+          # nodeSelector alone targets a host but does not clear its taints: forge
+          # carries node-role.kubernetes.io/control-plane=NoSchedule, so a job
+          # pinned there Pends forever with `1 node(s) had untolerated taint(s)`
+          # (seen 2026-09-25 on trading-feed-forge). Set .Values.tolerations for
+          # any app whose nodeName is a control-plane host.
+          {{- with .Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           containers:
             - name: job
               image: {{ .Values.image }}

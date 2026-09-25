@@ -20,6 +20,10 @@ spec:
         command: ["python", "tools/feed_lane.py", "--seconds", "90", "--relay", "wss://feed.mainnet.chain.robinhood.com"]
         deadline: 900
         nodeName: forge
+        tolerations:
+          - key: node-role.kubernetes.io/control-plane
+            operator: Exists
+            effect: NoSchedule
         dataPath: /home/j_kro/feed-data
         repoMount: false
         rhfeedPath: /home/j_kro/rhc-feed/src
