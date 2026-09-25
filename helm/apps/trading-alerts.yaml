@@ -17,13 +17,6 @@ spec:
       values: |
         name: trading-alerts
         schedule: "*/2 * * * *"
-        trigger:
-          kind: "derived"
-          justification: "the halt alert only matters when the halt ledger changes; a 15m staleness floor keeps it from ever going silent"
-          invalidated-by: "data/halt_blocked.jsonl"
-          governor: "governed_poll"
-          change-detection: true
-          staleness-floor: 900
         command: ["python", "tools/halt_alerts.py", "--once"]
         # Requests-sized per workload (t_6cf16590): own 7d/5m p95 29.6m over 61
         # incarnations (11 of them >10m), cpu -> next 10m.
