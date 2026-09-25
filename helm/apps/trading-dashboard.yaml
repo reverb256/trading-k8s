@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: trading-dashboard
+  namespace: argocd
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: trading
+  source:
+    repoURL: https://github.com/reverb256/trading-k8s.git
+    targetRevision: main
+    path: helm/charts/py-svc
+    helm:
+      releaseName: trading-dashboard
+      values: |
+        name: trading-dashboard
+        command: ["python", "tools/trading_dashboard.py", "9798"]
+        workdir: "/work"
+        hostNetwork: true
+        nodeName: nexus
+        trigger:
+          kind: "service"
+          justification: "read-only trading dashboard on :9798 for the trading.lan vhost; no work schedule, k8s restartPolicy is its liveness"
+          liveness-verifier: "k8s readiness/restartPolicy"
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+      - PruneLast=true
+      - CreateNamespace=true
