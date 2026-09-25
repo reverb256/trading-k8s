@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: trading-desk-brief
+  namespace: argocd
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: trading
+  source:
+    repoURL: https://github.com/reverb256/trading-k8s.git
+    targetRevision: main
+    path: helm/charts/py-job
+    helm:
+      releaseName: trading-desk-brief
+      values: |
+        name: trading-desk-brief
+        schedule: "0 7 * * *"
+        command: ["python", "tools/desk_brief.py", "--once"]
+        deadline: 600
+        repoMount: true
+        configMount: false
+        hostNetwork: true
+        nodeName: nexus
+        trigger:
+          kind: "calendar"
+          justification: "the morning desk brief is a calendar artifact: 'a day passed' is the trigger; it reads the book and writes a report"
+          mutates: "reports"
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+      - PruneLast=true
+      - CreateNamespace=true
