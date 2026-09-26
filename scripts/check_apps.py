@@ -24,17 +24,31 @@
    0600 FILE the job mounts and reads.  A manifest may name that file's path and
    nothing else -- no token value, and no path outside the mounted repo's data
    dir (git-ignored, rendered by `deploy/halt-alerts/provision-peer-env.py`).
+5. JUP-KEY-REACHABILITY (2026-09-26): a job whose command shells out to the jup
+   CLI must set `repoHomeMount: true`.  The CLI resolves its activeKey at RUN
+   time as `$HOME/.config/jup/keys/<name>.json`, and on the host that file is a
+   SYMLINK into the repo (`/home/j_kro/Work/trading/data/keys/live.json`).  HOME
+   is `/home/j_kro` in every pod and the jup config dir is host-mounted at that
+   same absolute path, so the symlink only resolves if the repo is ALSO visible
+   at the host path -- `/work` alone leaves it dangling and the CLI dies with
+   `Key "float" does not exist.` (trading-jup-perps-exec, 2026-09-26: every
+   non-neutral regime tick failed before it could print its preview).
 
 `--selftest` proves the rule in both directions offline (synthetic manifests)
 and then scans the real app dir; it prints APP-CHECK-SELFTEST-OK.
 
 Exit 0 = clean; non-zero with a report otherwise.
 """
+import os
 import re
 import sys
 from pathlib import Path
 
 APP_DIR = Path(__file__).resolve().parent.parent / "helm" / "apps"
+#: where the tools named by a manifest's `command:` live (override for testing)
+TRADING_REPO = Path(os.environ.get("TRADING_REPO", "/home/j_kro/Work/trading"))
+#: the in-repo path of the jup CLI, as spelled in the tool sources
+JUP_CLI = "npm-global/bin/jup"
 SOL_ARM_FLAGS = ("EXEC_ARMED", "FUEL_REFUEL_MODE")
 RHC_ARM_FLAG = "EVMC_ALLOW_LIVE"
 ARM_FLAGS = (*SOL_ARM_FLAGS, RHC_ARM_FLAG)
@@ -106,6 +120,22 @@ def scan_text(name: str, text: str) -> list:
             problems.append(f"{name}: HALT_ALERTS_PEER_FILE={value!r} is outside "
                             f"/work/data/ -- the peer file must be the mounted, "
                             f"git-ignored 0600 file")
+    # 5. JUP-KEY-REACHABILITY -- a jup-CLI caller needs the repo at its host path.
+    for elem in sorted(set(re.findall(r'"([^"\s]*\.py)"', text))):
+        tool = TRADING_REPO / elem
+        if not tool.is_file():
+            continue
+        try:
+            body = tool.read_text(errors="ignore")
+        except OSError:
+            continue
+        if JUP_CLI in body and not re.search(r"^\s*repoHomeMount:\s*true\b", text, re.M):
+            problems.append(
+                f"{name}: runs {elem}, which calls the jup CLI, but does not set "
+                f"repoHomeMount: true -- the CLI's activeKey is a symlink from "
+                f"$HOME/.config/jup/keys/ into the repo, so the repo must be "
+                f"mounted at {TRADING_REPO} inside the pod (else the CLI dies "
+                f"with `Key \"float\" does not exist.`)")
     return problems
 
 
@@ -183,6 +213,20 @@ def selftest() -> int:
     dup = "        values: |\n          name: a\n          name: b\n"
     ck(any("duplicate key" in p for p in scan_text("x.yaml", dup)),
        "a duplicate mapping key is still caught")
+
+    # JUP-KEY-REACHABILITY (2026-09-26), both directions. The synthetic manifests
+    # name the REAL tool, so the check reads a real jup-CLI caller; if the repo is
+    # not on this machine the two cases below are skipped, not silently passed.
+    have_tool = (TRADING_REPO / "tools" / "jup_perps_exec.py").is_file()
+    jup_cmd = '        command: ["python", "tools/jup_perps_exec.py", "--dry-run"]\n'
+    ck(not have_tool or
+       any("repoHomeMount" in p for p in scan_text("x.yaml", jup_cmd)),
+       "a jup-CLI caller with no repoHomeMount is caught "
+       "(trading-jup-perps-exec, 2026-09-26)")
+    ck(scan_text("x.yaml", jup_cmd + "        repoHomeMount: true\n") == [],
+       "the same caller WITH repoHomeMount: true is clean")
+    ck(scan_text("x.yaml", '        command: ["python", "tools/curve_watch.py"]\n') == [],
+       "a job that does not call the jup CLI needs no repoHomeMount")
 
     problems = []
     for p in sorted(APP_DIR.glob("*.yaml")):
