@@ -35,7 +35,10 @@ spec:
         # the pod-start latency, and matches rhc-launch-watch (--seconds 52 /
         # deadline 120). Normal runs finish in ~52s; the guard is
         # scripts/check_apps.py rule 6.
-        deadline: 120
+        # 120 -> 180 (2026-09-26): pod start measured at 60-94s while the
+        # host is I/O-saturated, so a 120s deadline can be eaten by the start
+        # alone and the SIGKILLed run leaves no log.
+        deadline: 180
         hostNetwork: true
         nodeName: nexus
         env:

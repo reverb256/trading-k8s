@@ -46,6 +46,17 @@
    Every self-bounded command must keep START_LATENCY_HEADROOM seconds of slack
    over its own cap.
 
+7. POD-START-LATENCY-FLOOR (2026-09-26): the same silent-SIGKILL class with NO
+   self-bound in the command at all. Measured on nexus, pod start (job creation
+   -> container start) is 2-3s when the node is idle but 30-57s under a
+   node-level burst (2026-09-26 11:52 delayed nine trading pods at once). A
+   `deadline` under START_LATENCY_MAX_S + MIN_WORK_S can therefore be spent
+   ENTIRELY on the start: `trading-gmgn-track` ran `deadline: 55` (the only
+   sub-120 deadline in the fleet) and its 11:52 pod started 38s late, so
+   Kubernetes SIGKILLed the tool ~17s in (DeadlineExceeded,
+   `trading-gmgn-track-29840692`, no log, run lost). Every workload keeps the
+   floor so a late start still leaves real work time.
+
 `--selftest` proves the rule in both directions offline (synthetic manifests)
 and then scans the real app dir; it prints APP-CHECK-SELFTEST-OK.
 
@@ -68,15 +79,23 @@ EXEC_ENV = "/work/data/exec.env"
 #: the single manifest that owns the RHC lane's arming (Q7+Q8, 2026-09-23).
 RHC_ARM_MANIFEST = "trading-daemon.yaml"
 RHC_ARM_REEXPORT = re.compile(r"export\s+EVMC_ALLOW_LIVE=1\b")
-#: rule 6: seconds of pod-start latency a self-bounded command must still fit
-#: under its `deadline` (job creation -> container start measured at 9-22s on
-#: nexus, rounded up; the pod in the 2026-09-26 grad-watch failure got 53s of a
-#: 75s deadline)
-START_LATENCY_HEADROOM = 30
+#: rule 6 + rule 7: seconds of pod-start latency a job must still fit under its
+#: `deadline`. `activeDeadlineSeconds` counts from JOB creation, so a late
+#: container start eats it. Measured on nexus: 2-3s while the host is idle, but
+#: 60-94s while it is I/O-saturated by the CI/tenant workloads sharing the node
+#: (2026-09-26 12:00: nine trading pods started 60-94s late; PSI io full ~40%,
+#: dm-0 at 100% util, load ~50 on 24 cores). That is why `deadline: 120` was
+#: STILL not enough for trading-rhc-grad-watch (29840703, DeadlineExceeded, no
+#: log) one commit after it had been raised 75 -> 120.
+START_LATENCY_HEADROOM = 90
 #: rule 6 fallback: the tool's own `timeout=seconds + N` slack, when the tool
 #: named by the command cannot be read (tools/rhc_grad_watch.py and
 #: tools/feed_lane.py both use +30)
 DEFAULT_TIMEOUT_SLACK = 30
+#: rule 7: seconds of real work every job must still get after a worst-case
+#: pod start
+MIN_WORK_S = 60
+MIN_DEADLINE_S = START_LATENCY_HEADROOM + MIN_WORK_S
 
 
 def scan_text(name: str, text: str) -> list:
@@ -187,6 +206,20 @@ def scan_text(name: str, text: str) -> list:
                     f"activeDeadlineSeconds counts from job creation, so a late pod "
                     f"start SIGKILLs the tool before it can print its own failure "
                     f"line (trading-rhc-grad-watch, 2026-09-26)")
+    # 7. POD-START-LATENCY-FLOOR (2026-09-26) -- see the module docstring. A
+    # deadline under the floor can be eaten by the pod start alone, and the
+    # SIGKILLed run leaves no log to diagnose (the tool never prints).
+    if len(vals) == 2:
+        md = re.search(r"^\s*deadline:\s*(\d+)\s*$", vals[1], re.M)
+        if md and int(md.group(1)) < MIN_DEADLINE_S:
+            problems.append(
+                f"{name}: deadline {int(md.group(1))}s is under the "
+                f"{MIN_DEADLINE_S}s pod-start floor (pod start measured up to "
+                f"{START_LATENCY_HEADROOM}s on an I/O-saturated nexus, and "
+                f"activeDeadlineSeconds counts from JOB creation) -- a late "
+                f"start SIGKILLs the tool before it prints anything "
+                f"(trading-gmgn-track 55s + trading-rhc-grad-watch 120s, "
+                f"2026-09-26: DeadlineExceeded, run lost with no log)")
     return problems
 
 
@@ -289,15 +322,32 @@ def selftest() -> int:
            for p in scan_text("x.yaml", tight)),
        "a deadline equal to the tool's own cap is caught "
        "(trading-rhc-grad-watch, 2026-09-26: DeadlineExceeded, no log)")
-    ck(scan_text("x.yaml", tight.replace("deadline: 75", "deadline: 120")) == [],
-       "the same job at deadline 120 is clean")
-    ck(scan_text("x.yaml", tight.replace("deadline: 75", "deadline: 104")) != [],
+    ck(scan_text("x.yaml", tight.replace("deadline: 75", "deadline: 120")) != [],
+       "the same job at deadline 120 is still caught -- measured pod starts of "
+       "60-90s under host saturation blew it (trading-rhc-grad-watch, "
+       "2026-09-26, one commit after 75 -> 120)")
+    ck(scan_text("x.yaml", tight.replace("deadline: 75", "deadline: 164")) != [],
        "one second under the need is still caught")
-    unbounded = ('        command: ["python", "tools/curve_watch.py"]\n'
-                 '        values: |\n          name: x\n          deadline: 30\n')
-    ck(scan_text("x.yaml", unbounded) == [],
-       "a job that bounds no work of its own is not judged on its deadline -- "
-       "a short deadline is only a bug when the command sets its own bound")
+    ck(scan_text("x.yaml", tight.replace("deadline: 75", "deadline: 180")) == [],
+       "the same job at deadline 180 is clean")
+    # 7. POD-START-LATENCY-FLOOR (2026-09-26), both directions. The command
+    # bounds no work of its own: the floor applies anyway, because a burst pod
+    # start (30-57s measured) can eat a short deadline whole.
+    short = ('        command: ["python", "tools/curve_watch.py"]\n'
+             '        values: |\n          name: x\n          deadline: 55\n')
+    ck(any("pod-start floor" in p for p in scan_text("x.yaml", short)),
+       "a deadline under the pod-start floor is caught "
+       "(trading-gmgn-track, 2026-09-26: DeadlineExceeded at 55s, no log)")
+    ck(scan_text("x.yaml", short.replace("deadline: 55", "deadline: 120")) != [],
+       "a 120s deadline is under the floor too -- it died for "
+       "trading-rhc-grad-watch (29840703)")
+    ck(scan_text("x.yaml", short.replace("deadline: 55", "deadline: 149")) != [],
+       "one second under the floor is still caught")
+    ck(scan_text("x.yaml", short.replace("deadline: 55", "deadline: 150")) == [],
+       "an unbounded command at exactly the 150s floor is clean")
+    ck(scan_text("x.yaml",
+                 '        command: ["python", "tools/curve_watch.py"]\n') == [],
+       "a manifest that declares no deadline is not judged on one")
 
     problems = []
     for p in sorted(APP_DIR.glob("*.yaml")):
