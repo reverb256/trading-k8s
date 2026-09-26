@@ -19,7 +19,13 @@ spec:
         schedule: "2-59/5 * * * *"
         command: ["python", "tools/gmgn_track.py"]
         backoffLimit: 0   # never re-run a whole sweep: a retry is more requests
-        deadline: 55
+        # 55 -> 180 (2026-09-26): the pod start alone was measured at 2-57s on
+        # nexus, so a 55s deadline could be spent ENTIRELY on the start -- the
+        # 11:52 tick was SIGKILLed 38s into the start with no log
+        # (DeadlineExceeded, job 29840692). 180 still clears the 5-min tick
+        # (concurrencyPolicy: Forbid) and adds no requests: backoffLimit is 0
+        # and the governor owns pacing.
+        deadline: 180
         repoMount: true
         configMount: true
         hostNetwork: false

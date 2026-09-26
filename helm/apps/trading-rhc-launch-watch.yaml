@@ -22,7 +22,10 @@ spec:
         # incarnations (113 of them >10m), cpu -> next 10m. Memory p95 59.3Mi is
         # already under the 64Mi request.
         cpuRequest: 20m
-        deadline: 120
+        # 120 -> 180 (2026-09-26): pod start measured at 60-94s while the
+        # host is I/O-saturated, so a 120s deadline can be eaten by the start
+        # alone and the SIGKILLed run leaves no log.
+        deadline: 180
         hostNetwork: true
         env:
           - name: GOVERNED_POLL
