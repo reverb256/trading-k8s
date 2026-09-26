@@ -22,7 +22,20 @@ spec:
         # incarnations (151 of them >10m), cpu -> next 10m. Memory p95 50.4Mi is
         # already under the 64Mi request.
         cpuRequest: 20m
-        deadline: 75
+        # 75 -> 120 (2026-09-26). activeDeadlineSeconds counts from JOB creation,
+        # so it is already 9-22s old (measured here) by the time the container
+        # starts, while the command bounds its own work at --tail 45 and the
+        # tool's own cap is 45+30=75s (tools/rhc_grad_watch.py: the outer
+        # wait_for(consume(seconds), timeout=seconds + 30) that prints
+        # RHC-GRAD-FAIL). Deadline 75 was therefore EQUAL to that cap: when the
+        # pod started late, Kubernetes SIGKILLed
+        # trading-rhc-grad-watch-29840438 mid-run (DeadlineExceeded, 2026-09-26)
+        # before the tool could print its own failure line, and the run left no
+        # log to diagnose. 120 leaves the tool its 30s of self-timeout slack plus
+        # the pod-start latency, and matches rhc-launch-watch (--seconds 52 /
+        # deadline 120). Normal runs finish in ~52s; the guard is
+        # scripts/check_apps.py rule 6.
+        deadline: 120
         hostNetwork: true
         nodeName: nexus
         env:

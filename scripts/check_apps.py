@@ -34,6 +34,18 @@
    `Key "float" does not exist.` (trading-jup-perps-exec, 2026-09-26: every
    non-neutral regime tick failed before it could print its preview).
 
+6. DEADLINE-VS-INTERNAL-TIMEOUT (2026-09-26): `activeDeadlineSeconds` counts from
+   JOB creation, but the container only starts 9-22s later (measured on nexus),
+   and a command that bounds its OWN work (`--tail N` / `--seconds N`) also spends
+   its tool's internal timeout slack (30s: `wait_for(consume(seconds),
+   timeout=seconds + 30)`, the line that prints the tool's own failure).
+   `trading-rhc-grad-watch` ran `--tail 45` under `deadline: 75` -- EXACTLY the
+   45+30 cap -- so one late pod start made Kubernetes SIGKILL the run
+   (DeadlineExceeded, `trading-rhc-grad-watch-29840438`, 2026-09-26) before it
+   could print `RHC-GRAD-FAIL`, and the failed job carried no log to diagnose.
+   Every self-bounded command must keep START_LATENCY_HEADROOM seconds of slack
+   over its own cap.
+
 `--selftest` proves the rule in both directions offline (synthetic manifests)
 and then scans the real app dir; it prints APP-CHECK-SELFTEST-OK.
 
@@ -56,6 +68,15 @@ EXEC_ENV = "/work/data/exec.env"
 #: the single manifest that owns the RHC lane's arming (Q7+Q8, 2026-09-23).
 RHC_ARM_MANIFEST = "trading-daemon.yaml"
 RHC_ARM_REEXPORT = re.compile(r"export\s+EVMC_ALLOW_LIVE=1\b")
+#: rule 6: seconds of pod-start latency a self-bounded command must still fit
+#: under its `deadline` (job creation -> container start measured at 9-22s on
+#: nexus, rounded up; the pod in the 2026-09-26 grad-watch failure got 53s of a
+#: 75s deadline)
+START_LATENCY_HEADROOM = 30
+#: rule 6 fallback: the tool's own `timeout=seconds + N` slack, when the tool
+#: named by the command cannot be read (tools/rhc_grad_watch.py and
+#: tools/feed_lane.py both use +30)
+DEFAULT_TIMEOUT_SLACK = 30
 
 
 def scan_text(name: str, text: str) -> list:
@@ -136,6 +157,36 @@ def scan_text(name: str, text: str) -> list:
                 f"$HOME/.config/jup/keys/ into the repo, so the repo must be "
                 f"mounted at {TRADING_REPO} inside the pod (else the CLI dies "
                 f"with `Key \"float\" does not exist.`)")
+    # 6. DEADLINE-VS-INTERNAL-TIMEOUT (2026-09-26) -- see the module docstring.
+    # A command that bounds its own runtime needs a deadline that clears that
+    # bound, its tool's own timeout slack, and the pod-start latency that
+    # activeDeadlineSeconds silently eats (it counts from JOB creation).
+    secs = None
+    for flag in ("--tail", "--seconds"):
+        m = re.search(rf'"{flag}",\s*"(\d+)"', text)
+        if m:
+            secs = int(m.group(1))
+            break
+    if secs is not None and len(vals) == 2:
+        md = re.search(r"^\s*deadline:\s*(\d+)\s*$", vals[1], re.M)
+        if md:
+            deadline = int(md.group(1))
+            slack = DEFAULT_TIMEOUT_SLACK
+            tool_m = re.search(r'"(tools/[^"\s]*\.py)"', text)
+            if tool_m and (TRADING_REPO / tool_m.group(1)).is_file():
+                tm = re.search(r"timeout=\s*[\w.]+\s*\+\s*(\d+)",
+                               (TRADING_REPO / tool_m.group(1)).read_text(errors="ignore"))
+                if tm:
+                    slack = int(tm.group(1))
+            need = secs + slack + START_LATENCY_HEADROOM
+            if deadline < need:
+                problems.append(
+                    f"{name}: deadline {deadline}s is under the {need}s this "
+                    f"command needs (its own {secs}s bound + {slack}s tool timeout "
+                    f"+ {START_LATENCY_HEADROOM}s pod-start latency) -- "
+                    f"activeDeadlineSeconds counts from job creation, so a late pod "
+                    f"start SIGKILLs the tool before it can print its own failure "
+                    f"line (trading-rhc-grad-watch, 2026-09-26)")
     return problems
 
 
@@ -227,6 +278,26 @@ def selftest() -> int:
        "the same caller WITH repoHomeMount: true is clean")
     ck(scan_text("x.yaml", '        command: ["python", "tools/curve_watch.py"]\n') == [],
        "a job that does not call the jup CLI needs no repoHomeMount")
+
+    # 6. DEADLINE-VS-INTERNAL-TIMEOUT (2026-09-26), both directions. The synthetic
+    # manifests name the REAL tool, so the check reads its real `+30` slack; if the
+    # repo is not on this machine the 30s fallback applies and the cases below hold
+    # either way (both are >= 105s of need at --tail 45).
+    tight = ('        command: ["python", "tools/rhc_grad_watch.py", "--tail", "45"]\n'
+             '        values: |\n          name: x\n          deadline: 75\n')
+    ck(any("is under the" in p and "pod-start latency" in p
+           for p in scan_text("x.yaml", tight)),
+       "a deadline equal to the tool's own cap is caught "
+       "(trading-rhc-grad-watch, 2026-09-26: DeadlineExceeded, no log)")
+    ck(scan_text("x.yaml", tight.replace("deadline: 75", "deadline: 120")) == [],
+       "the same job at deadline 120 is clean")
+    ck(scan_text("x.yaml", tight.replace("deadline: 75", "deadline: 104")) != [],
+       "one second under the need is still caught")
+    unbounded = ('        command: ["python", "tools/curve_watch.py"]\n'
+                 '        values: |\n          name: x\n          deadline: 30\n')
+    ck(scan_text("x.yaml", unbounded) == [],
+       "a job that bounds no work of its own is not judged on its deadline -- "
+       "a short deadline is only a bug when the command sets its own bound")
 
     problems = []
     for p in sorted(APP_DIR.glob("*.yaml")):
