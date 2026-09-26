@@ -10,6 +10,14 @@ deadline: 240
 # and RHFEED_SRC. Absent/empty renders nothing.
 env: []
 
+# repoHomeMount: mount the repo a SECOND time, at its host path
+# (/home/j_kro/Work/trading), on top of the usual /work mount. Set it for any
+# watcher that shells out to the jup CLI: the CLI resolves its activeKey as
+# $HOME/.config/jup/keys/<name>.json, and on the host that file is a symlink
+# into the repo, so the repo must exist at that absolute path inside the pod.
+# Requires repoMount: true. Default false (2026-09-26).
+repoHomeMount: false
+
 # Resource requests for the `job` container are per-app values — `cpuRequest` /
 # `memRequest` (both defaulted in templates/cronjob.yaml, both set per workload in
 # helm/apps/<name>.yaml). The 10m/64Mi default is a FLOOR, not a size; the sizing

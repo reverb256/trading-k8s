@@ -21,6 +21,11 @@ spec:
         deadline: 240
         repoMount: true
         configMount: true
+        # JUP-KEY-REACHABILITY (2026-09-26): tools/jup_perps_exec.py shells out to
+        # the jup CLI, whose activeKey (~/.config/jup/keys/float.json) is a symlink
+        # into this repo. Without the repo mounted at its host path the CLI fails
+        # with `Key "float" does not exist.` and the preview dies (job Error).
+        repoHomeMount: true
         hostNetwork: false
         nodeName: nexus
         env:

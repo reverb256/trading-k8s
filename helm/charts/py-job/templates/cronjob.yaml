@@ -104,6 +104,21 @@ spec:
                 {{- if .Values.repoMount }}
                 - name: repo
                   mountPath: /work
+                {{- if .Values.repoHomeMount }}
+                # JUP-KEY-REACHABILITY (2026-09-26): the jup CLI resolves its
+                # activeKey at RUN time as $HOME/.config/jup/keys/<name>.json; on
+                # the host that file is a SYMLINK into the repo
+                # (/home/j_kro/Work/trading/data/keys/live.json). HOME is
+                # /home/j_kro in every pod AND the jup config dir is host-mounted
+                # at that same absolute path, so the symlink resolves only if the
+                # repo is visible at the HOST path too -- /work alone leaves it
+                # dangling and the CLI dies with `Key "float" does not exist.`
+                # (trading-jup-perps-exec, 2026-09-26: preview failed, job Error).
+                # Same volume, second mountPath. Opt-in: only a jup-CLI caller
+                # needs it, and scripts/check_apps.py enforces it for those.
+                - name: repo
+                  mountPath: /home/j_kro/Work/trading
+                {{- end }}
                 {{- else }}
                 - name: data
                   mountPath: /work/data
