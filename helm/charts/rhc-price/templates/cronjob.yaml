@@ -18,10 +18,36 @@ spec:
     spec:
       backoffLimit: 2
       ttlSecondsAfterFinished: 600
-      activeDeadlineSeconds: 240
+      # 240 -> 480 (2026-10-02). activeDeadlineSeconds counts from JOB creation,
+      # so it is already 30-40s old (measured under the current node load) by the
+      # time the container starts, while the sampler itself runs 3.5-4 min when
+      # the box is busy. Deadline 240 was therefore inside the run time: a
+      # successful run (pod exited 0, printed "RHC-PRICE-OK tokens=45 of 45")
+      # was raced by the deadline and the Job controller stamped it Failed with
+      # reason DeadlineExceeded, so stack-sentinel reported phantom
+      # "k8s jobs failing" for trading-rhc-price-29849140/-45/-50. Same lesson as
+      # rhc-grad-watch and feed-lane: a deadline must clear pod start plus the
+      # tool bound, not sit inside it. 480s keeps a hung run bounded while giving
+      # a normal run ~2x headroom. concurrencyPolicy: Forbid below is what stops
+      # the next */5 tick from overlapping if a run ever does run long.
+      activeDeadlineSeconds: 480
       template:
         spec:
           restartPolicy: Never
+          # securityContext: this chart was the only trading workload without one,
+          # so its pod ran as ROOT and wrote data/rpc_gov.json + data/rpc_cache.json
+          # root-owned.  rpc_common._save names its temp file `<file>.<pid>.tmp` and
+          # every container execs python as PID 1, so the root rhc-price pod and the
+          # uid-1000 job pods collided on `rpc_gov.json.1.tmp` /
+          # `rpc_cache.json.1.tmp`: whichever lost the race died with
+          # PermissionError [Errno 13] and the k8s backoff retry then succeeded,
+          # which is why it read as intermittent.  Startup (corrected 2026-09-26):
+          # the deployed trading-jobs image, not a stale image, is what collides --
+          # ebff158 only added the pid, it is not unique across pods.
+          # Same posture as py-job/py-svc.
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
           nodeSelector:
             kubernetes.io/hostname: {{ .Values.nodeName }}
           containers:
