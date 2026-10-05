@@ -17,6 +17,9 @@ spec:
       values: |
         name: trading-feed-forge
         schedule: "*/10 * * * *"
+        # Suspended 2026-10-05: upstream RHC feed IP-blocked (HTTP 403), rail
+        # disabled by owner direction (canary disabled, 0 live sends) — no churn.
+        suspend: true
         command: ["python", "tools/feed_lane.py", "--seconds", "90", "--relay", "wss://feed.mainnet.chain.robinhood.com"]
         deadline: 900
         nodeName: forge
