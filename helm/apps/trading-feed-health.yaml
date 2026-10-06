@@ -1,0 +1,76 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: trading-feed-health
+  namespace: argocd
+  annotations:
+    # Why this app exists. The Robinhood Chain feed is refusing our source
+    # address range with HTTP 403 (measured: "This source address range has
+    # been blocked. Connecting in a manner intended to exceed or evade this
+    # feed service's limits is not authorized use of this service"), and the
+    # cluster had NO way to say so:
+    #   * rhc-feed-relay goes ArgoCD Degraded for a THIRD-PARTY block, so a red
+    #     app reads as our outage;
+    #   * trading-feed-forge / trading-feed-lane read Healthy while every pod
+    #     Failed, because ArgoCD's built-in CronJob health returns Healthy
+    #     whenever status.active is non-empty (argo-cd#24429) and the job holds
+    #     an active Job through its backoff window.
+    # feed_health.py replaces both readings with ONE verdict whose exit code is
+    # the contract: 0 for `ok` and `external` (someone else's 403 must not
+    # page anyone), 1 for `internal` (ours -> Job Failed -> Degraded -> a human
+    # looks). Staggered to :07 to avoid the top-of-hour burst.
+    trading.dev/fault-class: "upstream-vs-ours"
+    trading.dev/exit-code-contract: "0=ok|external (never pages), 1=internal (pages)"
+    trading.dev/evidence: "data/feed_health.json in the trading repo (verdict, upstream status, relay frame counts)"
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: trading
+  source:
+    repoURL: https://github.com/reverb256/solana-ai-trader.git
+    targetRevision: master
+    path: helm/charts/py-job
+    helm:
+      releaseName: trading-feed-health
+      values: |
+        name: trading-feed-health
+        # 10m: this is a VERIFIER, not a detector. It classifies an outage that
+        # is already visible; it must not be the thing that discovers it, and
+        # :07 keeps it clear of the :00 job burst (gmgn-reference: never add to
+        # the burst, a 429-looking loop is how a rate limit escalates).
+        schedule: "7-59/10 * * * *"
+        command: ["python", "tools/feed_health.py"]
+        # 180 > the 150s pod-start floor scripts/check_apps.py enforces (pod
+        # start measured up to 90s on an I/O-saturated nexus, and
+        # activeDeadlineSeconds counts from JOB creation, not container start)
+        # plus the tool's own worst case (8s TCP + 8s TLS + handshake + 10s frame
+        # window). Under-shooting this silently SIGKILLs the run with no log
+        # (trading-gmgn-track / trading-rhc-grad-watch, 2026-09-26).
+        deadline: 180
+        repoMount: true
+        configMount: false
+        # hostNetwork: the relay is a hostNetwork Deployment on nexus serving
+        # 127.0.0.1:9642, so the loopback probe only resolves from a hostNetwork
+        # pod. Without this the tool reads connection-refused and calls our own
+        # healthy relay "internal" -- a false page manufactured by the probe.
+        hostNetwork: true
+        nodeName: nexus
+        # The verifier MUST NOT re-arm itself on failure: a nonzero exit is the
+        # signal we want to keep emitting, and backoffLimit>0 would re-run a
+        # verdict that cannot change, burning a pod per retry while an operator
+        # is trying to read the one failure.
+        backoffLimit: 0
+        trigger:
+          kind: "absence"
+          justification: "verifier, not detector: it classifies an already-visible feed outage as upstream-vs-ours so an external 403 stops reading as our red app, and exits nonzero only when the fault is ours"
+          verifies: "upstream WS handshake status + our relay's DATA-frame count + feed_lane dead letters in the last hour"
+          mutates: "data/feed_health.json (own snapshot only)"
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+      - PruneLast=true
+      - CreateNamespace=true
