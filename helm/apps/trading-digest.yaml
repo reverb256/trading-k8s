@@ -27,7 +27,16 @@ spec:
         ttlSecondsAfterFinished: 604800
         repoMount: true
         configMount: false
-        hostNetwork: false
+        # 2026-10-05: promotion_digest.py fetches http://127.0.0.1:8794/status.json
+        # and trading-mcp is a hostNetwork Deployment, so the target listener is on
+        # the HOST loopback. Under hostNetwork: false that address is the pod own
+        # loopback -> URLError [Errno 111] Connection refused, which is what killed
+        # the 2026-10-05T13:05Z run and left the book with no interventions /
+        # needs_human / halt_alerts digest since 2026-10-04T13:05:06Z.
+        # hostNetwork: true matches trading-watchdog, the sibling py-job that dials
+        # the SAME loopback URL successfully. There is no Service for trading-mcp
+        # (only rhc-feed-relay is ClusterIP), so a DNS route does not exist yet.
+        hostNetwork: true
         nodeName: nexus
         trigger:
           kind: "calendar"
