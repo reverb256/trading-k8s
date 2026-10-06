@@ -6,6 +6,12 @@ imagePullPolicy: Never
 nodeName: nexus
 gpu: false
 deadline: 240
+
+# How long a FINISHED Job (and its pod logs) survive after completion.
+# Default 600 unchanged. A daily report that fails and then vanishes in
+# 10 minutes cannot be diagnosed at all -- the evidence is gone before an
+# operator reads the alert. Raise this for anything that must be read.
+ttlSecondsAfterFinished: 600
 # env: extra container env entries (list of {name, value}); rendered after HOME
 # and RHFEED_SRC. Absent/empty renders nothing.
 env: []

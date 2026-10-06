@@ -1,0 +1,108 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-probe
+  labels:
+    app.kubernetes.io/name: rhc-feed-relay
+data:
+  # Readiness probe program for the relay. It counts WebSocket DATA frames
+  # so a relay that is listening but relaying nothing reports Unready.
+  relay_data_probe.py: |
+    """Readiness probe for rhc-feed-relay: prove the relay is RELAYING.
+    
+    The old tcpSocket probe passed on a relay connected to nothing upstream:
+    9642 accepts TCP (and completes the WS 101 upgrade) while the sequencer
+    handshake is refused, so a dead relay read as Synced/Healthy and masked the
+    outage. This connects as a real WebSocket client and counts DATA frames.
+    
+    Server PINGs (opcode 0x9) are excluded on purpose: the broadcaster pings every
+    5s forever regardless of upstream state, so counting them would reintroduce the
+    same false green. exit 0 = feed data seen; exit 1 = connection but no data.
+    """
+    import base64
+    import os
+    import socket
+    import sys
+    import time
+    
+    HOST = os.environ.get("RELAY_PROBE_HOST", "127.0.0.1")
+    PORT = int(os.environ.get("RELAY_PROBE_PORT", "9642"))
+    WINDOW = float(os.environ.get("RELAY_PROBE_WINDOW", "10"))
+    deadline = time.time() + WINDOW
+    
+    try:
+        s = socket.create_connection((HOST, PORT), 3)
+    except OSError as e:
+        print("FAIL connect %s:%d: %s" % (HOST, PORT, e))
+        sys.exit(1)
+    
+    key = base64.b64encode(os.urandom(16)).decode()
+    s.sendall(("GET / HTTP/1.1\r\nHost: %s:%d\r\nUpgrade: websocket\r\n"
+               "Connection: Upgrade\r\nSec-WebSocket-Key: %s\r\n"
+               "Sec-WebSocket-Version: 13\r\n\r\n"
+               % (HOST, PORT, key)).encode())
+    s.settimeout(3)
+    buf = b""
+    while b"\r\n\r\n" not in buf:
+        if time.time() > deadline:
+            print("FAIL no HTTP response in %ds" % WINDOW)
+            sys.exit(1)
+        try:
+            chunk = s.recv(4096)
+        except socket.timeout:
+            print("FAIL handshake stalled")
+            sys.exit(1)
+        if not chunk:
+            print("FAIL closed during handshake")
+            sys.exit(1)
+        buf += chunk
+    
+    status = buf.split(b"\r\n", 1)[0]
+    if b" 101 " not in status:
+        print("FAIL handshake status %r" % status[:60])
+        sys.exit(1)
+    
+    buf = buf.split(b"\r\n\r\n", 1)[1]
+    s.settimeout(1.0)
+    frames = payload = pings = 0
+    while time.time() < deadline:
+        try:
+            chunk = s.recv(65536)
+        except socket.timeout:
+            continue
+        except OSError:
+            break
+        if not chunk:
+            break
+        buf += chunk
+        while len(buf) >= 2:
+            b0, b1 = buf[0], buf[1]
+            n = b1 & 0x7F
+            off = 2
+            if n == 126:
+                if len(buf) < 4:
+                    break
+                n = int.from_bytes(buf[2:4], "big")
+                off = 4
+            elif n == 127:
+                if len(buf) < 10:
+                    break
+                n = int.from_bytes(buf[2:10], "big")
+                off = 10
+            if len(buf) < off + n:
+                break
+            n_payload = n
+            buf = buf[off + n:]
+            if (b0 & 0x0F) == 0x9:
+                pings += 1
+            elif n_payload > 0:
+                frames += 1
+                payload += n_payload
+    
+    s.close()
+    print("data_frames=%d payload_bytes=%d pings=%d window=%.0fs"
+          % (frames, payload, pings, WINDOW))
+    if frames == 0:
+        print("FAIL socket open but no feed data (upstream not delivering)")
+        sys.exit(1)
+    print("OK relay is serving feed data")
