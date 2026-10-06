@@ -40,24 +40,41 @@ spec:
             - name: feed
               containerPort: {{ .Values.port }}
               protocol: TCP
-          # tcpSocket, not an HTTP check: the broadcaster answers a plain GET
-          # with "400 handshake error: bad Upgrade header", so an httpGet probe
-          # would treat a healthy relay as unhealthy. A listening socket is the
-          # same thing the compose healthcheck proved.
+          # Readiness proves the relay is RELAYING, not merely listening. The
+          # old tcpSocket probe passed on a relay connected to nothing upstream:
+          # 9642 accepts TCP (even completing the WS 101 upgrade) while the
+          # sequencer handshake is refused upstream, so the relay read
+          # Synced/Healthy and masked the outage. This exec probe connects as a
+          # real WebSocket client and counts DATA frames.
           #
-          # Neither probe proves the UPSTREAM feed is connected -- nothing the
-          # relay exposes does. Check the logs for "Feed connected" instead.
+          # httpGet is not an option, same reason as before: the handler answers
+          # a plain GET with "400 handshake error: bad Upgrade header".
           readinessProbe:
-            tcpSocket:
-              port: {{ .Values.port }}
+            exec:
+              command:
+                - python3
+                - /opt/relay-probe/relay_data_probe.py
             initialDelaySeconds: 10
-            periodSeconds: 10
-            failureThreshold: 6
+            periodSeconds: 30
+            timeoutSeconds: 15
+            failureThreshold: 3
+          # Liveness stays WEAK on purpose. A dead upstream is not a dead
+          # process, and restarting cannot fix an external 403 -- it would only
+          # churn the pod an operator is inspecting. Real process death is still
+          # caught by readiness (connection refused -> Unready).
           livenessProbe:
             tcpSocket:
               port: {{ .Values.port }}
             initialDelaySeconds: 30
             periodSeconds: 20
             failureThreshold: 3
+          volumeMounts:
+            - name: relayprobe
+              mountPath: /opt/relay-probe
+              readOnly: true
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: relayprobe
+          configMap:
+            name: {{ .Release.Name }}-probe

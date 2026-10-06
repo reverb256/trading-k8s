@@ -19,7 +19,7 @@ spec:
       # NOTE: not `| default 2` - Sprig treats 0 as empty, so an explicit
       # backoffLimit: 0 (never re-run a sweep) would silently render 2.
       backoffLimit: {{ if hasKey .Values "backoffLimit" }}{{ .Values.backoffLimit }}{{ else }}2{{ end }}
-      ttlSecondsAfterFinished: 600
+      ttlSecondsAfterFinished: {{ .Values.ttlSecondsAfterFinished | default 600 }}
       activeDeadlineSeconds: {{ .Values.deadline }}
       template:
         spec:

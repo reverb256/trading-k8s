@@ -19,6 +19,12 @@ spec:
         schedule: "5 8 * * *"
         command: ["python", "tools/promotion_digest.py"]
         deadline: 300
+        # 2026-10-05: the 13:05Z run failed and TTL-reaped itself at
+        # ttlSecondsAfterFinished: 600, destroying the only copy of the
+        # error text. 7 days keeps every failed run diagnosable while an
+        # alert is read and triaged, and bounds growth at ~7 Job objects
+        # (failedJobsHistoryLimit: 1 caps it to 1 at any instant).
+        ttlSecondsAfterFinished: 604800
         repoMount: true
         configMount: false
         hostNetwork: false
