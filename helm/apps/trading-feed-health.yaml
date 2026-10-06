@@ -28,8 +28,15 @@ spec:
     server: https://kubernetes.default.svc
     namespace: trading
   source:
-    repoURL: https://github.com/reverb256/solana-ai-trader.git
-    targetRevision: master
+    # Every other app in this repo sources trading-k8s and gets the trading
+    # repo's code through `repoMount: true` (hostPath /home/j_kro/Work/trading
+    # -> /work). An earlier draft of this manifest pointed source directly at
+    # solana-ai-trader, which ArgoCD cannot read -- the repo-server has no
+    # credentials for it, and the app sat at ComparisonError "authentication
+    # required: Repository not found". Match the convention: the CHART comes
+    # from trading-k8s, the TOOL comes from the mounted repo.
+    repoURL: https://github.com/reverb256/trading-k8s.git
+    targetRevision: main
     path: helm/charts/py-job
     helm:
       releaseName: trading-feed-health
@@ -48,6 +55,10 @@ spec:
         # window). Under-shooting this silently SIGKILLs the run with no log
         # (trading-gmgn-track / trading-rhc-grad-watch, 2026-09-26).
         deadline: 180
+        # /work is the hostPath mount of ~/Work/trading, so tools/feed_health.py
+        # is read off the live repo at pod start -- a logic change needs no image
+        # rebuild (unlike a new sibling import, which the `trading-jobs:local`
+        # image under imagePullPolicy: Never cannot take).
         repoMount: true
         configMount: false
         # hostNetwork: the relay is a hostNetwork Deployment on nexus serving
