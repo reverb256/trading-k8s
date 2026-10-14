@@ -44,7 +44,10 @@ spec:
         # so the one place that arms this lane is greppable in git, and
         # scripts/check_apps.py enforces exactly that. Size is unchanged:
         # trade_usd 0.8, max_per_trade_eth 0.0015, max_sends_per_hour 6.
-        command: ["sh", "-c", "set -a; . /work/data/exec.env 2>/dev/null; set +a; unset EXEC_ARMED FUEL_REFUEL_MODE; export EVMC_ALLOW_LIVE=1; exec python -u /work/src/daemon.py"]
+        # DISARMED 2026-10-14 (owner decision: no live until an edge is proven):
+        # EVMC_ALLOW_LIVE is now UNSET like the other two keys. To re-arm the RHC
+        # live lane, restore `export EVMC_ALLOW_LIVE=1` here (two-key: also exec.env).
+        command: ["sh", "-c", "set -a; . /work/data/exec.env 2>/dev/null; set +a; unset EXEC_ARMED EVMC_ALLOW_LIVE FUEL_REFUEL_MODE; exec python -u /work/src/daemon.py"]
         workdir: "/work/src"
         hostNetwork: true
         nodeName: nexus
