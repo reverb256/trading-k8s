@@ -23,18 +23,41 @@ spec:
           restartPolicy: Never
           nodeSelector:
             kubernetes.io/hostname: nexus
+          # Traceability: record the source commit of /home/j_kro/Work/trading.
+          # git-rev writes "<short-sha>[-dirty]" to /meta/sha using the already
+          # imported trading-jobs image (it ships git; pull policy Never). kaniko
+          # (-debug variant: same version, adds busybox sh) passes it as GIT_SHA
+          # -> LABEL org.opencontainers.image.revision, and tags trading-jobs:<sha>
+          # IN ADDITION to trading-jobs:latest, so existing consumers are unchanged.
+          initContainers:
+            - name: git-rev
+              image: docker.io/library/trading-jobs:local
+              imagePullPolicy: Never
+              command: ["sh", "-c", "cd /workspace && s=$(git -c safe.directory='*' rev-parse --short=12 HEAD) && if [ -n \"$(git -c safe.directory='*' status --porcelain --untracked-files=no)\" ]; then s=\"$s-dirty\"; fi && echo \"$s\" > /meta/sha && echo \"source revision: $s\""]
+              volumeMounts:
+                - {name: repo, mountPath: /workspace, readOnly: true}
+                - {name: meta, mountPath: /meta}
+              resources:
+                requests: {cpu: 10m, memory: 64Mi}
           containers:
             - name: kaniko
-              image: gcr.io/kaniko-project/executor:v1.23.2
+              image: gcr.io/kaniko-project/executor:v1.23.2-debug
+              command: ["/busybox/sh", "-c"]
               args:
-                - --dockerfile=/workspace/deploy/Dockerfile.jobs
-                - --context=dir:///workspace
-                - --no-push
-                - --tar-path=/work/data/images/trading-jobs.tar
-                - --destination=trading-jobs:latest
+                - |
+                  SHA=$(cat /meta/sha) && exec /kaniko/executor \
+                    --dockerfile=/workspace/deploy/Dockerfile.jobs \
+                    --context=dir:///workspace \
+                    --no-push \
+                    --tar-path=/work/data/images/trading-jobs.tar \
+                    --build-arg=GIT_SHA="$SHA" \
+                    --label=org.opencontainers.image.revision="$SHA" \
+                    --destination=trading-jobs:latest \
+                    --destination=trading-jobs:"$SHA"
               volumeMounts:
                 - {name: repo, mountPath: /workspace, readOnly: true}
                 - {name: data, mountPath: /work/data}
+                - {name: meta, mountPath: /meta}
               resources:
                 requests: {cpu: 500m, memory: 1Gi}
                 limits: {cpu: "4", memory: 8Gi}
@@ -43,3 +66,5 @@ spec:
               hostPath: {path: /home/j_kro/Work/trading, type: Directory}
             - name: data
               hostPath: {path: /home/j_kro/Work/trading/data, type: Directory}
+            - name: meta
+              emptyDir: {}
