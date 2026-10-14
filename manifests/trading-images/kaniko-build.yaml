@@ -49,6 +49,8 @@ spec:
                     --dockerfile=/workspace/deploy/Dockerfile.jobs \
                     --context=dir:///workspace \
                     --no-push \
+                    --compressed-caching=false \
+                    --snapshot-mode=redo \
                     --tar-path=/work/data/images/trading-jobs.tar \
                     --build-arg=GIT_SHA="$SHA" \
                     --label=org.opencontainers.image.revision="$SHA" \
@@ -60,7 +62,7 @@ spec:
                 - {name: meta, mountPath: /meta}
               resources:
                 requests: {cpu: 500m, memory: 1Gi}
-                limits: {cpu: "4", memory: 8Gi}
+                limits: {cpu: "4", memory: 12Gi}  # 8Gi OOMKilled at the torch-layer snapshot (2026-10-14)
           volumes:
             - name: repo
               hostPath: {path: /home/j_kro/Work/trading, type: Directory}
