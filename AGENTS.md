@@ -52,8 +52,13 @@ operator decides.
 
 - Commit as `Reverb <129622142+reverb256@users.noreply.github.com>`.
 - Never commit with a real-name or ISP-provided address.
-- Never put the operator's real name, city, ISP mailbox, or the `10.1.1.x`
-  LAN plan into a tracked file.
+- Never put the operator's real name, city, ISP mailbox, or the home LAN
+  subnet plan into a tracked file.
+
+  (This line names no literal address on purpose: a leak-guard that scans for
+  the fleet's private subnet range flagged the earlier wording inside this very
+  block, which is how `reverb256/blog` and `reverb256/reverb256.github.io`
+  caught it. Keep the rule, drop the literal.)
 
 ### Before you push
 
