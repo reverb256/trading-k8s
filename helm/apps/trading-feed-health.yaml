@@ -76,7 +76,7 @@ spec:
           kind: "absence"
           justification: "verifier, not detector: it classifies an already-visible feed outage as upstream-vs-ours so an external 403 stops reading as our red app, and exits nonzero only when the fault is ours"
           verifies: "upstream WS handshake status + our relay's DATA-frame count + feed_lane dead letters in the last hour"
-          mutates: "data/feed_health.json (own snapshot only)"
+          mutates: "data/feed_health.json"
   syncPolicy:
     automated:
       prune: true
